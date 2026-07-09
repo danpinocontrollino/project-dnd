@@ -109,6 +109,25 @@ def cr_to_xp(cr: Optional[float]) -> float:
     return float(np.interp(cr, _XP_KEYS, [CR_TO_XP[k] for k in _XP_KEYS]))
 
 
+def xp_to_cr(xp: float) -> float:
+    """Inverse of ``cr_to_xp``: the CR whose XP reward matches ``xp``.
+
+    Used by the by-the-book encounter estimate: an encounter with adjusted
+    XP ``A`` is as difficult (per DMG p.82 math) as a single monster of CR
+    ``xp_to_cr(A)``.  Linear interpolation between table rows; clamped to
+    the 0-30 CR band.  Exact round-trip on table values, so a single
+    monster's book estimate is always its printed CR.
+    """
+    if xp is None or (isinstance(xp, float) and np.isnan(xp)) or xp <= 0:
+        return 0.0
+    xp_values = [CR_TO_XP[k] for k in _XP_KEYS]
+    if xp <= xp_values[0]:
+        return float(_XP_KEYS[0])
+    if xp >= xp_values[-1]:
+        return float(_XP_KEYS[-1])
+    return float(np.interp(xp, xp_values, _XP_KEYS))
+
+
 # The DMG multiplier ladder: party-size adjustment shifts one step up/down.
 _XP_MULT_LADDER: Tuple[float, ...] = (0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0)
 

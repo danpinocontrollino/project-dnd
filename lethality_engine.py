@@ -22,9 +22,11 @@ import pandas as pd
 from initial_learn import CR_PREDICTOR_FEATURES, RAW_INPUT_COLUMNS, parse_cr_value
 from monster_offense import (
     cr_to_xp,
+    encounter_xp_multiplier,
     extract_legendary_mobility,
     extract_official_traits,
     offense_from_cr,
+    xp_to_cr,
 )
 
 TARGET_WIN_RATE = 0.65
@@ -410,6 +412,42 @@ def simulate_party_grid(
     out = pd.DataFrame(meta)
     out["win_prob"] = predict_win_for_parties(pipe, monster, configs, num_monsters)
     return out
+
+
+def official_encounter_estimate(
+    monster: MonsterInput,
+    num_monsters: int = 1,
+    *,
+    party_size: int = 4,
+) -> Dict[str, float]:
+    """The encounter's difficulty by the book — DMG p.82, computed honestly.
+
+    Previously the app compared the model's True Lethality Level against the
+    single monster's printed CR, so 6x CR-1 monsters still displayed "CR 1"
+    on the book side.  The DMG procedure is: sum every monster's XP, apply
+    the encounter multiplier for the monster count (with the party-size
+    step adjustment), and judge difficulty by the *adjusted* total.  We
+    express that adjusted XP back in CR units — the CR of the single
+    monster the DMG considers equally difficult — so the book column and
+    the model's level are an apples-to-apples pair.
+
+    Returns total_xp, multiplier, adjusted_xp, and effective_cr (snapped to
+    quarter steps; equals the printed CR when num_monsters == 1).
+    """
+    roster = _normalize_roster(monster, num_monsters)
+    fields = roster_monster_fields(roster)
+    total_xp = float(fields["total_monster_xp"])
+    n_total = float(fields["num_monsters_total"])
+    multiplier = encounter_xp_multiplier(n_total, party_size)
+    adjusted_xp = total_xp * multiplier
+    effective_cr = max(0.25, round(xp_to_cr(adjusted_xp) * 4) / 4)
+    return {
+        "total_xp": total_xp,
+        "num_monsters": n_total,
+        "multiplier": multiplier,
+        "adjusted_xp": adjusted_xp,
+        "effective_cr": effective_cr,
+    }
 
 
 def fair_fight_matches(

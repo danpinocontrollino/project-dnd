@@ -24,6 +24,7 @@ from lethality_engine import (
     lethality_appraisal,
     load_cr_predictor,
     load_monster_database,
+    official_encounter_estimate,
     predict_wotc_cr,
     profile_from_db_row,
     roster_monster_fields,
@@ -188,7 +189,17 @@ def main() -> None:
     print("\nBinary-searching the lethality frontier...")
     appraisal = lethality_appraisal(pipeline, roster)
 
-    print(f"\n📖 Roster avg CR (weighted): {weighted_cr:.2f}")
+    book = official_encounter_estimate(roster)
+    if book["num_monsters"] > 1:
+        print(
+            f"\n📖 By-the-book (DMG p.82): {book['total_xp']:,.0f} XP total"
+            f" x {book['multiplier']:g} multiplier for"
+            f" {book['num_monsters']:.0f} monsters ="
+            f" {book['adjusted_xp']:,.0f} adjusted XP"
+            f" ~ one CR {book['effective_cr']:g} monster"
+        )
+    else:
+        print(f"\n📖 Official rating: CR {book['effective_cr']:g}")
     if appraisal["verdict"] == "trivial":
         print(f"⚡ TRUE LETHALITY LEVEL: ≤ 1 — even a level-1 party wins "
               f"{appraisal['p_level_1']:.0%} of the time.")
@@ -199,7 +210,7 @@ def main() -> None:
         lethality_level = appraisal["level"]
         print(f"⚡ TRUE LETHALITY LEVEL: {lethality_level:g} "
               f"({appraisal['p_at_level']:.1%} win at this level)")
-        diff = lethality_level - weighted_cr
+        diff = lethality_level - book['effective_cr']
         if abs(diff) >= 2:
             print(f"   (Massive discrepancy: {abs(diff):.1f} levels "
                   f"{'harder' if diff > 0 else 'easier'} than the rating suggests)")

@@ -32,6 +32,7 @@ from lethality_engine import (
     lethality_appraisal,
     load_cr_predictor,
     load_monster_database,
+    official_encounter_estimate,
     normalize_roster,
     predict_wotc_cr,
     profile_from_db_row,
@@ -215,9 +216,25 @@ def render_results(pipeline, monster, num_monsters: int,
     verdict = appraisal["verdict"]
     lethality_level = appraisal["level"]
 
+    # By-the-book estimate (DMG p.82): sum XP, apply the encounter
+    # multiplier, express the adjusted total back in CR units.  6x CR-1
+    # monsters must NOT display as a CR-1 fight on the book side.
+    book = official_encounter_estimate(monster, num_monsters)
+    multiple = book["num_monsters"] > 1
+    book_cr = book["effective_cr"] if multiple else baseline_cr
+
     st.divider()
     c1, c2, c3 = st.columns(3)
-    c1.metric(baseline_label, f"CR {baseline_cr:g}")
+    if multiple:
+        c1.metric(
+            baseline_label, f"CR {book_cr:g}",
+            delta=f"{book['num_monsters']:.0f} monsters, DMG-adjusted",
+            delta_color="off",
+            help="Computed with the official DMG p.82 procedure — see the "
+                 "book-math line below.",
+        )
+    else:
+        c1.metric(baseline_label, f"CR {baseline_cr:g}")
     level_text = {"trivial": "≤ 1", "beyond_deadly": "> 20"}.get(
         verdict, f"{lethality_level:g}"
     )
@@ -231,6 +248,15 @@ def render_results(pipeline, monster, num_monsters: int,
                    f"differ in risk.")
     c3.metric("P(win) @ level 1 → 20",
               f"{appraisal['p_level_1']:.0%} → {appraisal['p_level_20']:.0%}")
+
+    if multiple:
+        st.caption(
+            f"📖 Book math (DMG p.82): {book['total_xp']:,.0f} XP total "
+            f"× **×{book['multiplier']:g}** encounter multiplier for "
+            f"{book['num_monsters']:.0f} monsters = "
+            f"**{book['adjusted_xp']:,.0f} adjusted XP** — as difficult as "
+            f"a single **CR {book_cr:g}** monster."
+        )
 
     if verdict == "trivial":
         st.info(
@@ -246,7 +272,7 @@ def render_results(pipeline, monster, num_monsters: int,
             f"{target:.0%} target. This is a TPK machine."
         )
     else:
-        diff = lethality_level - baseline_cr
+        diff = lethality_level - book_cr
         if abs(diff) >= 2:
             st.error(
                 f"🚨 **Major discrepancy.** The engine rates this encounter "
