@@ -1,0 +1,50 @@
+{
+  "classifier_benchmark": [
+    {
+      "model": "Ridge Logistic (Lec 04+05)",
+      "cv_auc_mean": 0.655475779742195,
+      "cv_auc_std": 0.03101436623640536,
+      "cv_brier_mean": 0.13631604095739658,
+      "cv_brier_std": 0.002047060706029099,
+      "cv_logloss_mean": 0.4431205150957738,
+      "cv_logloss_std": 0.009884615620168914
+    },
+    {
+      "model": "RFF Kernel Logistic (Lec 06)",
+      "cv_auc_mean": 0.6238571312618022,
+      "cv_auc_std": 0.012989476801709768,
+      "cv_brier_mean": 0.14176168310204565,
+      "cv_brier_std": 0.0034434607102933118,
+      "cv_logloss_mean": 0.4651755830776656,
+      "cv_logloss_std": 0.013376807594877905
+    },
+    {
+      "model": "XGBoost (production)",
+      "cv_auc_mean": 0.6140215447871384,
+      "cv_auc_std": 0.03284921997243128,
+      "cv_brier_mean": 0.14058483019471169,
+      "cv_brier_std": 0.004903650292917943,
+      "cv_logloss_mean": 0.4563936005578504,
+      "cv_logloss_std": 0.015079665002396036
+    }
+  ],
+  "campaign_shift_mmd": {
+    "mmd2_observed": 0.00030983050080168884,
+    "mmd2_null_95pct": 0.00045933283380191153,
+    "p_value": 0.12,
+    "bandwidth_median_heuristic": 6.020858009581525,
+    "n_per_side": 1500,
+    "n_permutations": 200
+  },
+  "gp_cr_predictor": {
+    "gp_mae": 0.8605680067101151,
+    "gp_r2": 0.9537541662151682,
+    "gp_mean_pred_std": 1.313182151635965,
+    "gp_95_interval_coverage": 0.95,
+    "xgb_mae": 0.9377798062940128,
+    "xgb_r2": 0.9475833844383953,
+    "n_train": 637,
+    "n_test": 160,
+    "learned_kernel": "1.66**2 * RBF(length_scale=[3.19, 8.31, 8.53, 4.72, 3.14, 116, 7.02, 19.7, 12.4, 1e+05, 6.08, 21.9]) + WhiteKernel(noise_level=0.0426)"
+  }
+}

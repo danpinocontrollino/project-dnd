@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+venv/
+.venv/
+
+# Generated artifacts (rebuild with the pipeline; keep the repo lean)
+figures_debug/
+
+# OS / editor noise
+.DS_Store
+.idea/
+.vscode/
+
+# Large raw data — distribute out-of-band (Git LFS, release asset, or the
+# FIREBALL dataset's own distribution channel), not in the git history.
+# Comment these out if you deliberately track them with LFS.
+FIREBALL/filtered/

@@ -1,0 +1,546 @@
+"""Shared inference engine for the True Lethality app and CLI.
+
+Single source of truth for:
+* building fully-specified raw input rows (including offensive stats),
+* the binary search for the party level that yields the target win rate,
+* the party-grid simulation ("Monte Carlo" sweep of compositions),
+* the win-probability curve across party levels.
+
+Both ``app.py`` and ``fair_fight_finder.py`` import from here — the two
+previously carried diverging copies of this logic (the CLI's simulation had
+already lost its ``num_monsters`` field to copy-paste drift).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Sequence, Tuple, Union
+
+import numpy as np
+import pandas as pd
+
+from initial_learn import CR_PREDICTOR_FEATURES, RAW_INPUT_COLUMNS, parse_cr_value
+from monster_offense import (
+    cr_to_xp,
+    extract_legendary_mobility,
+    extract_official_traits,
+    offense_from_cr,
+)
+
+TARGET_WIN_RATE = 0.65
+FAIR_WIN_BAND = (0.55, 0.75)
+
+# The four party roles the model understands, and which PHB classes count.
+ROLE_DEFINITIONS: Dict[str, Dict[str, str]] = {
+    "Healer": {
+        "classes": "Cleric, Druid, Bard",
+        "meaning": "Restores HP and removes conditions mid-fight. Turns "
+                   "attrition wars (legendary monsters, regeneration) from "
+                   "losses into wins.",
+    },
+    "Tank": {
+        "classes": "Barbarian, Fighter, Paladin",
+        "meaning": "High AC/HP frontline that soaks attacks so fragile "
+                   "members don't. Counters pack tactics and melee swarms.",
+    },
+    "Arcane": {
+        "classes": "Wizard, Sorcerer, Warlock",
+        "meaning": "Ranged magical damage and battlefield control. The "
+                   "reliable answer to flying/swimming monsters — but loses "
+                   "value against magic resistance.",
+    },
+    "Martial DPS": {
+        "classes": "Rogue, Monk, Ranger",
+        "meaning": "Sustained weapon damage (often ranged). Wins damage "
+                   "races — but halved by nonmagical physical resistance.",
+    },
+}
+
+PARTY_COMPOSITIONS: List[Dict[str, object]] = [
+    {
+        "name": "Balanced", "healer": 1, "tank": 1, "arcane": 1, "dps": 1,
+        "desc": "One of each role — healer, tank, arcane caster, martial DPS. "
+                "The textbook party with an answer to everything; the "
+                "reference point for the True Lethality Level.",
+    },
+    {
+        "name": "Glass Cannons", "healer": 0, "tank": 0, "arcane": 1, "dps": 1,
+        "desc": "All offense, no healer, no tank. Kills fast but folds if "
+                "the monster survives long enough to swing back — high "
+                "variance against bursty or legendary monsters.",
+    },
+    {
+        "name": "The Wall", "healer": 1, "tank": 1, "arcane": 0, "dps": 0,
+        "desc": "Tanks and healers only. Nearly unkillable but slow to end "
+                "fights — struggles against flyers (no ranged answer) and "
+                "loses long attrition races to regenerating monsters.",
+    },
+    {
+        "name": "Melee Rush", "healer": 0, "tank": 1, "arcane": 0, "dps": 1,
+        "desc": "Frontline bruisers, no casters, no healer. Great against "
+                "grounded brutes, helpless against flying/swimming monsters "
+                "and punished hard by physical resistance.",
+    },
+    {
+        "name": "Full Caster", "healer": 1, "tank": 0, "arcane": 1, "dps": 0,
+        "desc": "Casters and support, no frontline. Excellent control and "
+                "range, but pack tactics and melee swarms reach the squishy "
+                "backline unopposed; magic resistance blunts the whole plan.",
+    },
+]
+
+
+@dataclass
+class MonsterProfile:
+    """Everything the model needs to know about one monster statblock."""
+
+    cr: float
+    hp: float
+    ac: float
+    size_num: float = 3.0
+    stat_sum: float = 150.0
+    is_legendary: int = 0
+    has_mobility: int = 0
+    physical_res: int = 0
+    cc_immune: int = 0
+    magic_res: int = 0
+    pack_tactics: int = 0
+    spellcasting: int = 0
+    regeneration: int = 0
+    # Offensive potency; None -> imputed from the DMG p.274 table for the CR.
+    atk_bonus: Optional[float] = None
+    dpr: Optional[float] = None
+    save_dc: Optional[float] = None
+    burst: Optional[float] = None
+    name: str = "Custom Monster"
+
+    def __post_init__(self) -> None:
+        table_atk, table_dpr, table_dc = offense_from_cr(self.cr)
+        if self.atk_bonus is None or pd.isna(self.atk_bonus):
+            self.atk_bonus = table_atk
+        if self.dpr is None or pd.isna(self.dpr):
+            self.dpr = table_dpr
+        if self.save_dc is None or pd.isna(self.save_dc):
+            self.save_dc = table_dc
+        if self.burst is None or pd.isna(self.burst):
+            # Without a statblock nova, assume burst == sustained DPR.
+            self.burst = self.dpr
+
+
+# A mixed encounter: [(monster, count), ...].  Every simulation function
+# accepts either a single MonsterProfile (with num_monsters) or a Roster.
+Roster = Sequence[Tuple[MonsterProfile, int]]
+MonsterInput = Union[MonsterProfile, Roster]
+
+
+def normalize_roster(monster: MonsterInput, num_monsters: int = 1) -> List[Tuple[MonsterProfile, int]]:
+    """Coerce a MonsterProfile or roster into [(profile, count), ...]."""
+    if isinstance(monster, MonsterProfile):
+        return [(monster, max(1, int(num_monsters)))]
+    return [(m, max(1, int(c))) for m, c in monster]
+
+
+# Backward-compatible private alias.
+_normalize_roster = normalize_roster
+
+
+def roster_monster_fields(roster: Roster) -> Dict[str, float]:
+    """Encounter-level monster aggregates for a mixed roster.
+
+    Mirrors the training-time aggregation in ``parse_fireball.py`` exactly:
+    count-weighted means for continuous stats, max for binary flags and
+    apex-threat numbers, sums for the pooled damage race.
+    """
+    pairs = [(m, max(1, int(c))) for m, c in roster]
+    total = sum(c for _, c in pairs)
+
+    def wmean(get) -> float:
+        return sum(get(m) * c for m, c in pairs) / total
+
+    return {
+        "num_monsters": total,
+        "num_monsters_total": total,
+        "avg_monster_cr": wmean(lambda m: float(m.cr)),
+        "max_monster_cr": max(float(m.cr) for m, _ in pairs),
+        "avg_monster_hp": wmean(lambda m: float(m.hp)),
+        "total_monster_hp": sum(float(m.hp) * c for m, c in pairs),
+        "avg_monster_ac": wmean(lambda m: float(m.ac)),
+        "avg_monster_size_num": wmean(lambda m: float(m.size_num)),
+        "avg_monster_stat_sum": wmean(lambda m: float(m.stat_sum)),
+        "monster_is_legendary": max(int(m.is_legendary) for m, _ in pairs),
+        "monster_has_mobility": max(int(m.has_mobility) for m, _ in pairs),
+        "monster_has_physical_res": max(int(m.physical_res) for m, _ in pairs),
+        "monster_immune_to_cc": max(int(m.cc_immune) for m, _ in pairs),
+        "monster_has_magic_res": max(int(m.magic_res) for m, _ in pairs),
+        "monster_has_pack_tactics": max(int(m.pack_tactics) for m, _ in pairs),
+        "monster_has_spellcasting": max(int(m.spellcasting) for m, _ in pairs),
+        "monster_has_regeneration": max(int(m.regeneration) for m, _ in pairs),
+        "avg_monster_dpr": wmean(lambda m: float(m.dpr)),
+        "total_monster_dpr": sum(float(m.dpr) * c for m, c in pairs),
+        "max_monster_atk_bonus": max(float(m.atk_bonus) for m, _ in pairs),
+        "max_monster_save_dc": max(float(m.save_dc) for m, _ in pairs),
+        "max_monster_burst": max(float(m.burst) for m, _ in pairs),
+        "total_monster_xp": sum(cr_to_xp(m.cr) * c for m, c in pairs),
+    }
+
+
+def encounter_row(
+    monster: MonsterInput,
+    *,
+    avg_party_level: float,
+    party_size: int,
+    num_monsters: int = 1,
+    has_healer: int,
+    has_tank: int,
+    has_arcane: int,
+    has_martial_dps: int,
+) -> Dict[str, float]:
+    """A complete raw-input row for the pipeline (all RAW_INPUT_COLUMNS).
+
+    ``monster`` is a single MonsterProfile (repeated ``num_monsters`` times)
+    or a Roster of (profile, count) pairs; ``num_monsters`` is ignored for
+    rosters, whose counts are per-pair.
+    """
+    row = roster_monster_fields(_normalize_roster(monster, num_monsters))
+    row.update(
+        {
+            "avg_party_level": float(avg_party_level),
+            "party_size": int(party_size),
+            "has_healer": int(has_healer),
+            "has_tank": int(has_tank),
+            "has_arcane": int(has_arcane),
+            "has_martial_dps": int(has_martial_dps),
+        }
+    )
+    return row
+
+
+def predict_win_probability(pipe, rows: List[Dict[str, float]]) -> np.ndarray:
+    df = pd.DataFrame(rows)
+    return pipe.predict_proba(df[list(RAW_INPUT_COLUMNS)])[:, 1]
+
+
+# ── Survivability physics guard ─────────────────────────────────────────────
+# The FIREBALL logs are contaminated by DM mercy exactly where the model
+# needs data most: fights the damage math says are hopeless (party deleted
+# in <=1 round) were still "won" 84.5% of the time at real tables — fudged
+# rolls, retreats, reinforcements.  No model trained on that data can answer
+# the app's counterfactual ("fight 19 Liches TO THE DEATH"), so an explicit
+# physics layer caps P(win) by the party's survivability:
+#
+#     cap = sigmoid(A * rounds_to_kill_party + B)
+#
+# anchored at rtk=1 -> 0.10 (party deleted in one round), rtk=2 -> 0.50,
+# rtk=3 -> 0.90; effectively non-binding (cap ~ 1) for any normal encounter
+# with rtk >= 4.  rounds_to_kill_party comes from the SAME feature math the
+# model trains on, is smooth, increases with party level, and decreases
+# with roster damage — so all engine monotonicity guarantees survive.
+_GUARD_A = 2.197  # solves sigmoid(A*1 + B) = 0.10, sigmoid(A*3 + B) = 0.90
+_GUARD_B = -4.394
+
+
+def _survival_cap(rows: List[Dict[str, float]]) -> np.ndarray:
+    """Physics ceiling on P(win) from the deterministic damage race."""
+    from initial_learn import DnDFeatureEngineer, FEATURE_COLUMNS
+
+    feats = DnDFeatureEngineer(1.5, FEATURE_COLUMNS).transform(pd.DataFrame(rows))
+    rtk = feats["rounds_to_kill_party"].to_numpy(dtype=float)
+    return 1.0 / (1.0 + np.exp(-(_GUARD_A * rtk + _GUARD_B)))
+
+
+def predict_win_for_parties(
+    pipe,
+    monster: MonsterInput,
+    party_configs: List[Dict[str, float]],
+    num_monsters: int = 1,
+) -> np.ndarray:
+    """P(win) for each party config, with two domain constraints applied.
+
+    1. **Roster dominance** — for mixed rosters the count-weighted averages
+       can *dilute*: a Lich plus six goblins has a lower avg CR/DPR than the
+       Lich alone, and the model may rate the bigger fight easier.  Adding
+       monsters can never make an encounter easier, so every homogeneous
+       sub-roster is also scored and the elementwise minimum wins.
+    2. **Survivability physics** — the model saturates near the empirical
+       win-rate ceiling even for mathematically hopeless fights (see
+       ``_survival_cap``); P(win) is capped by the damage-race sigmoid so
+       19 Liches read as the TPK they are instead of "level 8".
+    """
+    roster = _normalize_roster(monster, num_monsters)
+    variants: List[List[Tuple[MonsterProfile, int]]] = [list(roster)]
+    if len(roster) > 1:
+        variants += [[(m, c)] for m, c in roster]
+
+    rows = [
+        encounter_row(variant, **cfg)
+        for variant in variants
+        for cfg in party_configs
+    ]
+    probs = np.minimum(predict_win_probability(pipe, rows), _survival_cap(rows))
+    return probs.reshape(len(variants), len(party_configs)).min(axis=0)
+
+
+def _party_config(level: float, party_size: int, comp: Dict[str, object]) -> Dict[str, float]:
+    return {
+        "avg_party_level": float(level),
+        "party_size": int(party_size),
+        "has_healer": int(comp["healer"]),
+        "has_tank": int(comp["tank"]),
+        "has_arcane": int(comp["arcane"]),
+        "has_martial_dps": int(comp["dps"]),
+    }
+
+
+_BALANCED = {"healer": 1, "tank": 1, "arcane": 1, "dps": 1}
+
+
+def lethality_appraisal(
+    pipe,
+    monster: MonsterInput,
+    num_monsters: int = 1,
+    *,
+    target: float = TARGET_WIN_RATE,
+    party_size: int = 4,
+    iterations: int = 18,
+) -> Dict[str, float]:
+    """Find the party level where a balanced party hits the target win rate.
+
+    The model is only defined on levels 1-20 (inputs are clipped inside the
+    transformer), so the search stays in that band and boundary cases get an
+    explicit verdict instead of a fabricated fractional level:
+
+    * ``trivial``       — P(win) >= target already at level 1,
+    * ``beyond_deadly`` — P(win) < target even at level 20,
+    * ``ok``            — the target is crossed inside [1, 20].
+    """
+    p_low, p_high = predict_win_for_parties(
+        pipe,
+        monster,
+        [
+            _party_config(1.0, party_size, _BALANCED),
+            _party_config(20.0, party_size, _BALANCED),
+        ],
+        num_monsters,
+    )
+    base = {"p_level_1": float(p_low), "p_level_20": float(p_high)}
+    if p_low >= target:
+        return {**base, "level": 1.0, "verdict": "trivial", "p_at_level": float(p_low)}
+    if p_high < target:
+        return {**base, "level": 20.0, "verdict": "beyond_deadly", "p_at_level": float(p_high)}
+
+    low, high = 1.0, 20.0
+    for _ in range(iterations):
+        guess = (low + high) / 2.0
+        win_prob = predict_win_for_parties(
+            pipe, monster, [_party_config(guess, party_size, _BALANCED)], num_monsters
+        )[0]
+        if win_prob < target:
+            low = guess  # party too weak -> need higher level
+        else:
+            high = guess
+    level = round(((low + high) / 2.0) * 4) / 4
+    # Win probability AT the appraised level: distinguishes encounters that
+    # share a level but differ in risk (1 Lich vs 2 Liches both near L5).
+    p_at_level = float(
+        predict_win_for_parties(
+            pipe, monster, [_party_config(level, party_size, _BALANCED)], num_monsters
+        )[0]
+    )
+    return {**base, "level": float(level), "verdict": "ok", "p_at_level": p_at_level}
+
+
+def find_true_lethality_level(
+    pipe,
+    monster: MonsterInput,
+    num_monsters: int = 1,
+    *,
+    target: float = TARGET_WIN_RATE,
+    party_size: int = 4,
+    iterations: int = 18,
+) -> float:
+    """Backward-compatible wrapper returning just the level."""
+    return lethality_appraisal(
+        pipe, monster, num_monsters,
+        target=target, party_size=party_size, iterations=iterations,
+    )["level"]
+
+
+def win_curve(
+    pipe,
+    monster: MonsterInput,
+    num_monsters: int = 1,
+    *,
+    party_size: int = 4,
+    compositions: Optional[List[Dict[str, object]]] = None,
+) -> pd.DataFrame:
+    """P(win) for levels 1..20, one curve per composition — for plotting."""
+    comps = compositions or PARTY_COMPOSITIONS
+    configs, meta = [], []
+    for comp in comps:
+        for level in range(1, 21):
+            configs.append(_party_config(level, party_size, comp))
+            meta.append({"comp_name": comp["name"], "avg_party_level": level})
+    out = pd.DataFrame(meta)
+    out["win_prob"] = predict_win_for_parties(pipe, monster, configs, num_monsters)
+    return out
+
+
+def simulate_party_grid(
+    pipe,
+    monster: MonsterInput,
+    num_monsters: int = 1,
+) -> pd.DataFrame:
+    """Sweep party sizes 3-6 x levels 1-20 x 5 compositions (400 parties)."""
+    configs, meta = [], []
+    for party_size in (3, 4, 5, 6):
+        for level in range(1, 21):
+            for comp in PARTY_COMPOSITIONS:
+                configs.append(_party_config(level, party_size, comp))
+                meta.append(
+                    {
+                        "avg_party_level": level,
+                        "party_size": party_size,
+                        "comp_name": comp["name"],
+                        "has_healer": comp["healer"],
+                        "has_tank": comp["tank"],
+                        "has_arcane": comp["arcane"],
+                        "has_martial_dps": comp["dps"],
+                    }
+                )
+    out = pd.DataFrame(meta)
+    out["win_prob"] = predict_win_for_parties(pipe, monster, configs, num_monsters)
+    return out
+
+
+def fair_fight_matches(
+    df_sim: pd.DataFrame, top_n: int = 10, target: float = TARGET_WIN_RATE
+) -> pd.DataFrame:
+    """Parties inside the fair-fight band (target ±0.10), closest first."""
+    fair = df_sim[(df_sim["win_prob"] - target).abs() <= 0.10].copy()
+    if fair.empty:
+        fair = df_sim.copy()
+        top_n = min(top_n, 5)
+    fair["distance_from_ideal"] = (fair["win_prob"] - target).abs()
+    return fair.sort_values("distance_from_ideal").head(top_n)
+
+
+def load_cr_predictor(
+    json_path: str = "cr_predictor_model.json",
+    pkl_path: str = "cr_predictor_model.pkl",
+):
+    """Load the WotC-CR predictor, preferring the version-proof native JSON.
+
+    XGBoost pickles break across xgboost versions, and the sklearn wrapper's
+    ``load_model`` breaks on old-xgboost + new-sklearn pairings (sklearn 1.6
+    removed ``_estimator_type``, raising ``TypeError: _estimator_type
+    undefined``).  The low-level ``xgb.Booster`` depends on neither, so the
+    JSON is loaded through it directly.  The pickle remains as a fallback
+    for repos that only carry the .pkl.  Returns ``None`` when neither
+    artifact exists — callers already handle that.
+    """
+    import os
+
+    if os.path.exists(json_path):
+        import xgboost as xgb
+
+        booster = xgb.Booster()
+        booster.load_model(json_path)
+        return booster
+    if os.path.exists(pkl_path):
+        import joblib
+
+        return joblib.load(pkl_path)
+    return None
+
+
+def predict_wotc_cr(cr_predictor, features: Dict[str, float]) -> float:
+    """Predict the CR WotC would assign, snapped to quarter steps.
+
+    Builds the frame by reindexing on ``CR_PREDICTOR_FEATURES`` so column
+    names and order always match training exactly, regardless of the
+    caller's dict ordering.  Accepts either a raw ``xgb.Booster`` (the
+    version-proof JSON path) or a fitted sklearn-style regressor (the
+    legacy pickle path).
+    """
+    import xgboost as xgb
+
+    frame = pd.DataFrame([features]).reindex(
+        columns=list(CR_PREDICTOR_FEATURES)
+    ).astype(float)
+    if isinstance(cr_predictor, xgb.Booster):
+        # Build from a raw numpy array with EXPLICIT feature names: some
+        # pandas/xgboost version pairings fail to detect the DataFrame and
+        # silently drop column names, making predict() raise "data did not
+        # contain feature names".  Explicit names sidestep detection.
+        dmat = xgb.DMatrix(
+            frame.to_numpy(dtype=float),
+            feature_names=list(CR_PREDICTOR_FEATURES),
+        )
+        raw = cr_predictor.predict(dmat)[0]
+    else:
+        raw = cr_predictor.predict(frame)[0]
+    return max(0.25, round(float(raw) * 4) / 4)
+
+
+def load_monster_database(
+    csv_path: str = "Monster Spreadsheet (D&D5e) - Official Stats.csv",
+    offense_csv: str = "monster_offense_stats.csv",
+) -> pd.DataFrame:
+    """Official bestiary + parsed offensive stats, ready for profile lookup."""
+    db = pd.read_csv(csv_path)
+    db["clean_name"] = (
+        db["Name"].astype(str).str.lower().str.strip().str.replace("-", " ", regex=False)
+    )
+    db["cr_num"] = db["CR"].apply(parse_cr_value)
+
+    # Canonical trait extraction — single source of truth in monster_offense.
+    db[["is_legendary", "has_mobility"]] = extract_legendary_mobility(
+        db["Additional"], db["Speeds"]
+    )
+    db[
+        ["physical_res", "cc_immune", "magic_res",
+         "pack_tactics", "spellcasting", "regeneration"]
+    ] = extract_official_traits(db["WRI"], db["Additional"])[
+        ["physical_res", "cc_immune", "magic_res",
+         "pack_tactics", "spellcasting", "regeneration"]
+    ]
+
+    for col in ["STR", "DEX", "CON", "INT", "WIS", "CHA"]:
+        db[col] = pd.to_numeric(db[col], errors="coerce")
+    db["stat_sum"] = db[["STR", "DEX", "CON", "INT", "WIS", "CHA"]].sum(axis=1)
+
+    size_map = {"tiny": 1, "small": 2, "medium": 3, "large": 4, "huge": 5, "gargantuan": 6}
+    db["size_num"] = db["Size"].str.strip().str.lower().map(size_map)
+
+    try:
+        offense = pd.read_csv(offense_csv)
+        db = db.merge(offense, on="clean_name", how="left")
+    except FileNotFoundError:
+        db["atk_bonus"] = np.nan
+        db["dpr"] = np.nan
+        db["save_dc"] = np.nan
+        db["offense_source"] = "dmg_cr_table"
+    return db
+
+
+def profile_from_db_row(row: pd.Series) -> MonsterProfile:
+    return MonsterProfile(
+        cr=float(row["cr_num"]),
+        hp=float(row["HP"]),
+        ac=float(row["AC"]),
+        size_num=float(row["size_num"]) if pd.notna(row["size_num"]) else 3.0,
+        stat_sum=float(row["stat_sum"]) if pd.notna(row["stat_sum"]) else 150.0,
+        is_legendary=int(row["is_legendary"]),
+        has_mobility=int(row["has_mobility"]),
+        physical_res=int(row["physical_res"]),
+        cc_immune=int(row["cc_immune"]),
+        magic_res=int(row["magic_res"]),
+        pack_tactics=int(row["pack_tactics"]),
+        spellcasting=int(row["spellcasting"]),
+        regeneration=int(row["regeneration"]),
+        atk_bonus=row.get("atk_bonus"),
+        dpr=row.get("dpr"),
+        save_dc=row.get("save_dc"),
+        burst=row.get("burst_dmg"),
+        name=str(row["Name"]),
+    )

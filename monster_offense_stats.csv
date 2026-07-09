@@ -1,0 +1,763 @@
+clean_name,atk_bonus,dpr,save_dc,burst_dmg,offense_source
+aarakocra,3.0,4.5,13.0,4.5,dmg_cr_table
+abjurer,7.0,59.5,16.0,59.5,dmg_cr_table
+aboleth,9.0,45.0,14.0,49.0,srd_statblock
+abominable yeti,7.0,59.5,16.0,59.5,dmg_cr_table
+acererak,11.0,185.5,20.0,185.5,dmg_cr_table
+acolyte,2.0,2.0,12.0,2.0,srd_statblock
+adult black dragon,11.0,49.0,18.0,54.0,srd_statblock
+adult blue dracolich,10.0,107.5,19.0,107.5,dmg_cr_table
+adult blue dragon,12.0,53.0,19.0,66.0,srd_statblock
+adult brass dragon,11.0,45.0,18.0,45.0,srd_statblock
+adult bronze dragon,12.0,48.0,19.0,66.0,srd_statblock
+adult copper dragon,11.0,45.0,18.0,54.0,srd_statblock
+adult gold dragon,14.0,51.0,21.0,66.0,srd_statblock
+adult green dragon,11.0,52.0,18.0,56.0,srd_statblock
+adult kruthik,3.0,17.5,13.0,17.5,dmg_cr_table
+adult oblex,6.0,35.5,15.0,35.5,dmg_cr_table
+adult red dragon,14.0,58.0,21.0,63.0,srd_statblock
+adult silver dragon,13.0,51.0,20.0,58.0,srd_statblock
+adult white dragon,11.0,49.0,19.0,54.0,srd_statblock
+air elemental,8.0,28.0,13.0,28.0,srd_statblock
+air elemental myrmidon,6.0,47.5,15.0,47.5,dmg_cr_table
+albino dwarf warrior,3.0,4.5,13.0,4.5,dmg_cr_table
+aldani,3.0,11.5,13.0,11.5,dmg_cr_table
+alhoon,7.0,65.5,16.0,65.5,dmg_cr_table
+alkilith,8.0,71.5,17.0,71.5,dmg_cr_table
+allip,6.0,35.5,15.0,35.5,dmg_cr_table
+allosaurus,6.0,11.5,13.0,11.5,srd_statblock
+ambush drake,3.0,7.0,13.0,7.0,dmg_cr_table
+amnizu,10.0,113.5,19.0,113.5,dmg_cr_table
+ancient black dragon,15.0,60.0,22.0,67.0,srd_statblock
+ancient blue dragon,16.0,65.0,23.0,88.0,srd_statblock
+ancient brass dragon,14.0,51.0,21.0,56.0,srd_statblock
+ancient bronze dragon,16.0,54.0,23.0,88.0,srd_statblock
+ancient copper dragon,15.0,51.0,22.0,63.0,srd_statblock
+ancient gold dragon,17.0,57.0,24.0,71.0,srd_statblock
+ancient green dragon,15.0,68.0,22.0,77.0,srd_statblock
+ancient red dragon,17.0,71.0,24.0,91.0,srd_statblock
+ancient shadow,3.0,11.5,13.0,11.5,dmg_cr_table
+ancient silver dragon,17.0,57.0,24.0,67.0,srd_statblock
+ancient white dragon,14.0,60.0,22.0,72.0,srd_statblock
+androsphinx,12.0,34.0,18.0,44.0,srd_statblock
+animated armor,4.0,10.0,13.0,10.0,srd_statblock
+ankheg,5.0,13.0,13.0,13.0,srd_statblock
+ankylosaurus,7.0,18.0,14.0,18.0,srd_statblock
+annis hag,6.0,41.5,15.0,41.5,dmg_cr_table
+ape,5.0,12.0,13.0,12.0,srd_statblock
+apprentice wizard,3.0,4.5,13.0,4.5,dmg_cr_table
+arcanaloth,8.0,77.5,17.0,77.5,dmg_cr_table
+archdruid,8.0,77.5,17.0,77.5,dmg_cr_table
+archer,4.0,23.5,13.0,23.5,dmg_cr_table
+archmage,6.0,36.0,17.0,36.0,srd_statblock
+armanite,6.0,47.5,15.0,47.5,dmg_cr_table
+assassin,6.0,61.0,15.0,61.0,srd_statblock
+assassin vine,4.0,23.5,13.0,23.5,dmg_cr_table
+astral dreadnought,11.0,149.5,20.0,149.5,dmg_cr_table
+atropal,8.0,83.5,18.0,83.5,dmg_cr_table
+aurochs,3.0,17.5,13.0,17.5,dmg_cr_table
+autumn eladrin,7.0,65.5,16.0,65.5,dmg_cr_table
+awakened shrub,1.0,0.5,13.0,0.5,srd_statblock
+awakened tree,6.0,14.0,13.0,14.0,srd_statblock
+axe beak,4.0,6.0,13.0,6.0,srd_statblock
+azer,5.0,11.0,13.0,11.0,srd_statblock
+babau,5.0,29.5,14.0,29.5,dmg_cr_table
+baboon,1.0,0.5,13.0,0.5,srd_statblock
+badger,2.0,1.0,13.0,1.0,srd_statblock
+bael,10.0,119.5,19.0,119.5,dmg_cr_table
+balhannoth,8.0,71.5,17.0,71.5,dmg_cr_table
+balor,14.0,59.0,20.0,59.0,srd_statblock
+banderhobb,6.0,35.5,15.0,35.5,dmg_cr_table
+bandit,3.0,4.5,13.0,4.5,srd_statblock
+bandit captain,5.0,16.5,13.0,16.5,srd_statblock
+banshee,4.0,12.0,13.0,12.0,srd_statblock
+baphomet,11.0,185.5,20.0,185.5,dmg_cr_table
+barbed devil,6.0,26.0,15.0,26.0,srd_statblock
+bard,3.0,17.5,13.0,17.5,dmg_cr_table
+barghest,5.0,29.5,14.0,29.5,dmg_cr_table
+barlgura,6.0,35.5,15.0,35.5,dmg_cr_table
+basilisk,5.0,17.0,12.0,17.0,srd_statblock
+bat,0.0,1.0,13.0,1.0,srd_statblock
+bearded devil,5.0,14.0,12.0,14.0,srd_statblock
+behir,10.0,56.0,16.0,66.0,srd_statblock
+beholder,8.0,83.5,18.0,83.5,dmg_cr_table
+beholder zombie,6.0,35.5,15.0,35.5,dmg_cr_table
+belaphoss,10.0,131.5,19.0,131.5,dmg_cr_table
+berbalang,3.0,17.5,13.0,17.5,dmg_cr_table
+berserker,5.0,9.0,13.0,9.0,srd_statblock
+bheur hag,6.0,47.5,15.0,47.5,dmg_cr_table
+black abishai,6.0,47.5,15.0,47.5,dmg_cr_table
+black bear,3.0,12.0,13.0,12.0,srd_statblock
+black dragon wyrmling,4.0,9.0,11.0,22.0,srd_statblock
+black gauntlet of bane,6.0,41.5,15.0,41.5,dmg_cr_table
+black pudding,5.0,24.0,14.0,24.0,srd_statblock
+blackguard,7.0,53.5,16.0,53.5,dmg_cr_table
+blink dog,3.0,4.0,13.0,4.0,srd_statblock
+blood hawk,4.0,4.0,13.0,4.0,srd_statblock
+blue abishai,10.0,107.5,19.0,107.5,dmg_cr_table
+blue dragon wyrmling,5.0,11.0,12.0,22.0,srd_statblock
+blue slaad,6.0,47.5,15.0,47.5,dmg_cr_table
+boar,3.0,4.0,11.0,4.0,srd_statblock
+bodak,6.0,41.5,15.0,41.5,dmg_cr_table
+boggle,3.0,2.5,13.0,2.5,dmg_cr_table
+bone devil,8.0,57.0,14.0,57.0,srd_statblock
+bone naga,5.0,29.5,14.0,29.5,dmg_cr_table
+boneclaw,8.0,77.5,17.0,77.5,dmg_cr_table
+brass dragon wyrmling,4.0,7.0,11.0,14.0,srd_statblock
+brontosaurus,6.0,35.5,15.0,35.5,dmg_cr_table
+bronze dragon wyrmling,5.0,8.0,12.0,16.0,srd_statblock
+brown bear,5.0,19.0,13.0,19.0,srd_statblock
+bugbear,4.0,10.0,13.0,10.0,srd_statblock
+bugbear chief,4.0,23.5,13.0,23.5,dmg_cr_table
+bulette,7.0,30.0,16.0,30.0,srd_statblock
+bulezau,4.0,23.5,13.0,23.5,dmg_cr_table
+bullywug,3.0,4.5,13.0,4.5,dmg_cr_table
+cadaver collector,8.0,89.5,18.0,89.5,dmg_cr_table
+cambion,6.0,35.5,15.0,35.5,dmg_cr_table
+camel,5.0,2.0,13.0,2.0,srd_statblock
+canoloth,7.0,53.5,16.0,53.5,dmg_cr_table
+carrion crawler,3.0,17.5,13.0,17.5,dmg_cr_table
+cat,0.0,1.0,13.0,1.0,srd_statblock
+catoblepas,6.0,35.5,15.0,35.5,dmg_cr_table
+cave fisher,4.0,23.5,13.0,23.5,dmg_cr_table
+centaur,6.0,17.333333333333332,13.0,17.333333333333332,srd_statblock
+chain devil,8.0,36.0,14.0,36.0,srd_statblock
+champion,7.0,59.5,16.0,59.5,dmg_cr_table
+chasme,6.0,41.5,15.0,41.5,dmg_cr_table
+chimera,7.0,32.0,15.0,32.0,srd_statblock
+chitine,3.0,7.0,13.0,7.0,dmg_cr_table
+choker,3.0,11.5,13.0,11.5,dmg_cr_table
+choldrith,4.0,23.5,13.0,23.5,dmg_cr_table
+chuul,6.0,22.0,14.0,22.0,srd_statblock
+clay golem,8.0,32.0,15.0,32.0,srd_statblock
+cloaker,6.0,45.0,16.0,49.0,srd_statblock
+cloud giant,12.0,51.0,16.0,51.0,srd_statblock
+cloud giant smiling one,8.0,71.5,17.0,71.5,dmg_cr_table
+cockatrice,3.0,3.0,11.0,3.0,srd_statblock
+commoner,2.0,2.0,13.0,2.0,srd_statblock
+conjurer,6.0,41.5,15.0,41.5,dmg_cr_table
+constrictor snake,4.0,5.5,14.0,5.5,srd_statblock
+copper dragon wyrmling,4.0,7.0,11.0,18.0,srd_statblock
+corpse flower,7.0,53.5,16.0,53.5,dmg_cr_table
+couatl,8.0,9.0,15.0,9.0,srd_statblock
+cow,3.0,4.5,13.0,4.5,dmg_cr_table
+crab,0.0,1.0,13.0,1.0,srd_statblock
+crag cat,3.0,11.5,13.0,11.5,dmg_cr_table
+cranium rat,3.0,0.5,13.0,0.5,dmg_cr_table
+crawling claw,3.0,0.5,13.0,0.5,dmg_cr_table
+crocodile,4.0,7.0,12.0,7.0,srd_statblock
+crokek toeck,8.0,89.5,18.0,89.5,dmg_cr_table
+cult fanatic,4.0,45.0,11.0,49.0,srd_statblock
+cultist,3.0,7.5,13.0,49.0,srd_statblock
+cyclops,9.0,47.0,15.0,47.0,srd_statblock
+dao,8.0,71.5,17.0,71.5,dmg_cr_table
+darkling,3.0,7.0,13.0,7.0,dmg_cr_table
+darkling elder,3.0,17.5,13.0,17.5,dmg_cr_table
+darkmantle,5.0,6.0,13.0,6.0,srd_statblock
+death dog,4.0,34.5,12.0,49.0,srd_statblock
+death kiss,7.0,65.5,16.0,65.5,dmg_cr_table
+death knight,10.0,107.5,19.0,107.5,dmg_cr_table
+death slaad,7.0,65.5,16.0,65.5,dmg_cr_table
+death tyrant,8.0,89.5,18.0,89.5,dmg_cr_table
+death s head of bhaal,6.0,35.5,15.0,35.5,dmg_cr_table
+deathlock,5.0,29.5,14.0,29.5,dmg_cr_table
+deathlock mastermind,7.0,53.5,16.0,53.5,dmg_cr_table
+deathlock wight,4.0,23.5,13.0,23.5,dmg_cr_table
+deep gnome svirfneblin,3.0,7.0,13.0,7.0,dmg_cr_table
+deep scion,4.0,23.5,13.0,23.5,dmg_cr_table
+deer,2.0,2.0,13.0,2.0,srd_statblock
+deinonychus,3.0,11.5,13.0,11.5,dmg_cr_table
+demilich,10.0,113.5,19.0,113.5,dmg_cr_table
+demogorgon,12.0,239.5,21.0,239.5,dmg_cr_table
+derro,3.0,4.5,13.0,4.5,dmg_cr_table
+derro savant,4.0,23.5,13.0,23.5,dmg_cr_table
+deva,8.0,50.0,17.0,50.0,srd_statblock
+devilroot,6.0,47.5,15.0,47.5,dmg_cr_table
+devourer,8.0,83.5,18.0,83.5,dmg_cr_table
+dhergoloth,6.0,47.5,15.0,47.5,dmg_cr_table
+dimetrodon,3.0,4.5,13.0,4.5,dmg_cr_table
+dire troll,8.0,83.5,18.0,83.5,dmg_cr_table
+dire wolf,5.0,10.0,13.0,10.0,srd_statblock
+displacer beast,4.0,23.5,13.0,23.5,dmg_cr_table
+diviner,7.0,53.5,16.0,53.5,dmg_cr_table
+djinni,9.0,45.0,18.0,75.0,srd_statblock
+dolphin,3.0,2.5,13.0,2.5,dmg_cr_table
+doppelganger,6.0,14.0,13.0,14.0,srd_statblock
+draegloth,6.0,47.5,15.0,47.5,dmg_cr_table
+draft horse,6.0,9.0,13.0,9.0,srd_statblock
+dragon turtle,13.0,68.0,20.0,68.0,srd_statblock
+dragonbait,6.0,35.5,15.0,35.5,dmg_cr_table
+dretch,2.0,8.0,11.0,8.0,srd_statblock
+drider,6.0,45.0,13.0,49.0,srd_statblock
+drow,4.0,13.5,13.0,49.0,srd_statblock
+drow arachnomancer,8.0,83.5,18.0,83.5,dmg_cr_table
+drow elite warrior,6.0,35.5,15.0,35.5,dmg_cr_table
+drow favored consort,10.0,113.5,19.0,113.5,dmg_cr_table
+drow house captain,7.0,59.5,16.0,59.5,dmg_cr_table
+drow inquisitor,8.0,89.5,18.0,89.5,dmg_cr_table
+drow mage,6.0,47.5,15.0,47.5,dmg_cr_table
+drow matron mother,10.0,131.5,19.0,131.5,dmg_cr_table
+drow priestress of lolth,7.0,53.5,16.0,53.5,dmg_cr_table
+drow shadowblade,8.0,71.5,17.0,71.5,dmg_cr_table
+druid,4.0,9.0,12.0,9.0,srd_statblock
+dryad,6.0,34.5,14.0,49.0,srd_statblock
+duergar,4.0,34.5,13.0,49.0,srd_statblock
+duergar despot,8.0,77.5,17.0,77.5,dmg_cr_table
+duergar kavalrachni,3.0,17.5,13.0,17.5,dmg_cr_table
+duergar mind master,3.0,17.5,13.0,17.5,dmg_cr_table
+duergar soulblade,3.0,11.5,13.0,11.5,dmg_cr_table
+duergar stone guard,3.0,17.5,13.0,17.5,dmg_cr_table
+duergar warlord,6.0,41.5,15.0,41.5,dmg_cr_table
+duergar xarrorn,3.0,17.5,13.0,17.5,dmg_cr_table
+duodrone,3.0,4.5,13.0,4.5,dmg_cr_table
+dust mephit,4.0,4.0,10.0,4.0,srd_statblock
+dybbuk,5.0,29.5,14.0,29.5,dmg_cr_table
+eagle,4.0,3.0,13.0,3.0,srd_statblock
+earth elemental,8.0,28.0,15.0,28.0,srd_statblock
+earth elemental myrmidon,6.0,47.5,15.0,47.5,dmg_cr_table
+eblis,3.0,11.5,13.0,11.5,dmg_cr_table
+efreeti,10.0,45.0,15.0,75.0,srd_statblock
+eidolon,8.0,77.5,17.0,77.5,dmg_cr_table
+elder brain,8.0,89.5,18.0,89.5,dmg_cr_table
+elder oblex,7.0,65.5,16.0,65.5,dmg_cr_table
+elder tempest,11.0,185.5,20.0,185.5,dmg_cr_table
+elephant,8.0,20.5,12.0,20.5,srd_statblock
+elk,5.0,7.0,13.0,7.0,srd_statblock
+empyrean,11.0,185.5,20.0,185.5,dmg_cr_table
+enchanter,6.0,35.5,15.0,35.5,dmg_cr_table
+erinyes,8.0,63.0,14.0,63.0,srd_statblock
+ettercap,4.0,17.0,11.0,17.0,srd_statblock
+ettin,7.0,45.0,14.0,49.0,srd_statblock
+evoker,7.0,59.5,16.0,59.5,dmg_cr_table
+expert lvl 1,3.0,0.5,13.0,0.5,dmg_cr_table
+expert lvl 2,3.0,0.5,13.0,0.5,dmg_cr_table
+expert lvl 3,3.0,0.5,13.0,0.5,dmg_cr_table
+expert lvl 4,3.0,0.5,13.0,0.5,dmg_cr_table
+expert lvl 5,3.0,0.5,13.0,0.5,dmg_cr_table
+expert lvl 6,3.0,0.5,13.0,0.5,dmg_cr_table
+faerie dragon,3.0,11.5,13.0,11.5,dmg_cr_table
+female steeder,3.0,11.5,13.0,11.5,dmg_cr_table
+fire elemental,6.0,20.0,15.0,20.0,srd_statblock
+fire elemental myrmidon,6.0,47.5,15.0,47.5,dmg_cr_table
+fire giant,11.0,57.0,16.0,57.0,srd_statblock
+fire giant dreadnought,8.0,89.5,18.0,89.5,dmg_cr_table
+fire snake,3.0,11.5,13.0,11.5,dmg_cr_table
+firenewt warlock of imix,3.0,11.5,13.0,11.5,dmg_cr_table
+firenewt warrior,3.0,7.0,13.0,7.0,dmg_cr_table
+fist of bane,3.0,7.0,13.0,7.0,dmg_cr_table
+flail snail,4.0,23.5,13.0,23.5,dmg_cr_table
+flameskull,5.0,28.0,13.0,28.0,srd_statblock
+flesh golem,7.0,26.0,15.0,26.0,srd_statblock
+flind,7.0,59.5,16.0,59.5,dmg_cr_table
+flumph,3.0,2.5,13.0,2.5,dmg_cr_table
+flying snake,6.0,7.0,13.0,7.0,srd_statblock
+flying sword,3.0,5.0,13.0,5.0,srd_statblock
+fomorian,7.0,53.5,16.0,53.5,dmg_cr_table
+fraz urb luu,11.0,185.5,20.0,185.5,dmg_cr_table
+frog,3.0,0.5,13.0,0.5,dmg_cr_table
+froghemoth,7.0,65.5,16.0,65.5,dmg_cr_table
+frost giant,9.0,53.0,16.0,53.0,srd_statblock
+frost giant everlasting one,8.0,77.5,17.0,77.5,dmg_cr_table
+frost salamander,7.0,59.5,16.0,59.5,dmg_cr_table
+galeb duhr,6.0,41.5,15.0,41.5,dmg_cr_table
+gargoyle,4.0,10.0,13.0,10.0,srd_statblock
+gas spore,3.0,7.0,13.0,7.0,dmg_cr_table
+gauth,6.0,41.5,15.0,41.5,dmg_cr_table
+gazer,3.0,7.0,13.0,7.0,dmg_cr_table
+gelatinous cube,4.0,10.0,15.0,31.0,srd_statblock
+geryon,11.0,167.5,20.0,167.5,dmg_cr_table
+ghast,5.0,11.0,10.0,11.0,srd_statblock
+ghost,5.0,45.0,13.0,49.0,srd_statblock
+ghoul,4.0,8.0,10.0,8.0,srd_statblock
+giant ape,9.0,52.0,15.0,52.0,srd_statblock
+giant badger,3.0,10.0,13.0,10.0,srd_statblock
+giant bat,4.0,5.0,13.0,5.0,srd_statblock
+giant boar,5.0,10.0,13.0,10.0,srd_statblock
+giant centipede,4.0,10.0,11.0,10.0,srd_statblock
+giant constrictor snake,6.0,12.0,16.0,12.0,srd_statblock
+giant crab,3.0,4.0,11.0,4.0,srd_statblock
+giant crocodile,8.0,35.0,16.0,35.0,srd_statblock
+giant eagle,5.0,16.0,13.0,16.0,srd_statblock
+giant elk,6.0,16.5,14.0,16.5,srd_statblock
+giant fire beetle,1.0,0.5,13.0,0.5,srd_statblock
+giant four armed gargoyle,7.0,65.5,16.0,65.5,dmg_cr_table
+giant frog,3.0,4.0,11.0,4.0,srd_statblock
+giant goat,5.0,8.0,13.0,8.0,srd_statblock
+giant hyena,5.0,10.0,13.0,10.0,srd_statblock
+giant lizard,4.0,6.0,13.0,6.0,srd_statblock
+giant octopus,5.0,10.0,16.0,10.0,srd_statblock
+giant owl,3.0,8.0,13.0,8.0,srd_statblock
+giant poisonous snake,6.0,13.5,11.0,13.5,srd_statblock
+giant rat,4.0,4.0,13.0,4.0,srd_statblock
+giant scorpion,4.0,52.5,12.0,52.5,srd_statblock
+giant sea horse,3.0,4.0,11.0,4.0,srd_statblock
+giant shark,9.0,22.0,15.0,22.0,srd_statblock
+giant spider,5.0,16.0,12.0,16.0,srd_statblock
+giant strider,3.0,11.5,13.0,11.5,dmg_cr_table
+giant toad,4.0,12.0,13.0,12.0,srd_statblock
+giant two headed goat,3.0,7.0,13.0,7.0,dmg_cr_table
+giant vulture,4.0,16.0,13.0,16.0,srd_statblock
+giant wasp,4.0,15.0,11.0,15.0,srd_statblock
+giant weasel,5.0,5.0,13.0,5.0,srd_statblock
+giant wolf spider,3.0,11.0,11.0,11.0,srd_statblock
+gibbering mouther,2.0,17.0,13.0,17.0,srd_statblock
+giff,4.0,23.5,13.0,23.5,dmg_cr_table
+girallon,5.0,29.5,14.0,29.5,dmg_cr_table
+githyanki gish,7.0,65.5,16.0,65.5,dmg_cr_table
+githyanki kith  rak,8.0,77.5,17.0,77.5,dmg_cr_table
+githyanki knight,7.0,53.5,16.0,53.5,dmg_cr_table
+githyanki supreme commander,8.0,89.5,18.0,89.5,dmg_cr_table
+githyanki warrior,4.0,23.5,13.0,23.5,dmg_cr_table
+githzerai anarch,9.0,101.5,18.0,101.5,dmg_cr_table
+githzerai enlightned,7.0,65.5,16.0,65.5,dmg_cr_table
+githzerai monk,3.0,17.5,13.0,17.5,dmg_cr_table
+githzerai zerth,6.0,41.5,15.0,41.5,dmg_cr_table
+glabrezu,9.0,46.0,16.0,46.0,srd_statblock
+gladiator,7.0,33.0,15.0,33.0,srd_statblock
+gloom weaver,7.0,59.5,16.0,59.5,dmg_cr_table
+gnoll,4.0,5.0,13.0,5.0,srd_statblock
+gnoll fang of yeenoghu,5.0,29.5,14.0,29.5,dmg_cr_table
+gnoll flesh gnawer,3.0,11.5,13.0,11.5,dmg_cr_table
+gnoll hunter,3.0,7.0,13.0,7.0,dmg_cr_table
+gnoll pack lord,3.0,17.5,13.0,17.5,dmg_cr_table
+gnoll witherling,3.0,4.5,13.0,4.5,dmg_cr_table
+goat,3.0,3.0,10.0,3.0,srd_statblock
+goblin,4.0,5.0,13.0,5.0,srd_statblock
+goblin boss,3.0,11.5,13.0,11.5,dmg_cr_table
+gold dragon wyrmling,6.0,31.0,13.0,31.0,srd_statblock
+gorgon,8.0,17.0,16.0,17.0,srd_statblock
+goristro,10.0,107.5,19.0,107.5,dmg_cr_table
+gray ooze,3.0,11.0,13.0,11.0,srd_statblock
+gray render,8.0,77.5,17.0,77.5,dmg_cr_table
+gray slaad,7.0,59.5,16.0,59.5,dmg_cr_table
+graz zt,12.0,203.5,21.0,203.5,dmg_cr_table
+green abishai,8.0,95.5,18.0,95.5,dmg_cr_table
+green dragon wyrmling,4.0,10.0,11.0,21.0,srd_statblock
+green hag,6.0,13.0,20.0,13.0,srd_statblock
+green slaad,7.0,53.5,16.0,53.5,dmg_cr_table
+grell,4.0,23.5,13.0,23.5,dmg_cr_table
+grick,4.0,7.0,13.0,7.0,srd_statblock
+grick alpha,6.0,47.5,15.0,47.5,dmg_cr_table
+griffon,6.0,19.0,13.0,19.0,srd_statblock
+grimlock,5.0,7.0,13.0,7.0,srd_statblock
+grung,3.0,4.5,13.0,4.5,dmg_cr_table
+grung elite warrior,3.0,17.5,13.0,17.5,dmg_cr_table
+grung wildling,3.0,11.5,13.0,11.5,dmg_cr_table
+guard,3.0,5.0,13.0,5.0,srd_statblock
+guard drake,3.0,17.5,13.0,17.5,dmg_cr_table
+guardian naga,8.0,49.0,16.0,49.0,srd_statblock
+gynosphinx,8.0,26.0,16.0,26.0,srd_statblock
+halaster blackcloak,11.0,185.5,20.0,185.5,dmg_cr_table
+half ogre,3.0,11.5,13.0,11.5,dmg_cr_table
+half red dragon veteran,5.0,13.333333333333334,15.0,24.0,srd_statblock
+harpy,3.0,34.5,11.0,49.0,srd_statblock
+hawk,5.0,1.0,13.0,1.0,srd_statblock
+hell hound,5.0,14.0,12.0,21.0,srd_statblock
+hellfire engine,9.0,101.5,18.0,101.5,dmg_cr_table
+hellwasp,6.0,35.5,15.0,35.5,dmg_cr_table
+helmed horror,5.0,29.5,14.0,29.5,dmg_cr_table
+hezrou,7.0,39.0,14.0,39.0,srd_statblock
+hill giant,8.0,39.0,15.0,39.0,srd_statblock
+hippogriff,5.0,18.0,13.0,18.0,srd_statblock
+hobgoblin,3.0,5.5,13.0,5.5,srd_statblock
+hobgoblin captain,4.0,23.5,13.0,23.5,dmg_cr_table
+hobgoblin devastator,5.0,29.5,14.0,29.5,dmg_cr_table
+hobgoblin iron shadow,3.0,17.5,13.0,17.5,dmg_cr_table
+hobgoblin warlord,6.0,41.5,15.0,41.5,dmg_cr_table
+homunculus,4.0,1.0,10.0,1.0,srd_statblock
+hook horror,4.0,23.5,13.0,23.5,dmg_cr_table
+horned devil,10.0,39.0,17.0,39.0,srd_statblock
+howler,7.0,53.5,16.0,53.5,dmg_cr_table
+hulking crab,6.0,35.5,15.0,35.5,dmg_cr_table
+hunter shark,6.0,13.0,13.0,13.0,srd_statblock
+hutijin,11.0,149.5,20.0,149.5,dmg_cr_table
+hydra,8.0,45.0,16.0,49.0,srd_statblock
+hydroloth,7.0,59.5,16.0,59.5,dmg_cr_table
+hyena,2.0,3.0,13.0,3.0,srd_statblock
+ice devil,10.0,64.0,17.0,64.0,srd_statblock
+ice mephit,3.0,21.0,10.0,36.0,srd_statblock
+ice toad,3.0,11.5,13.0,11.5,dmg_cr_table
+illusionist,4.0,23.5,13.0,23.5,dmg_cr_table
+imix,10.0,119.5,19.0,119.5,dmg_cr_table
+imp,5.0,15.0,11.0,15.0,srd_statblock
+intellect devourer,3.0,17.5,13.0,17.5,dmg_cr_table
+invisible stalker,6.0,20.0,15.0,20.0,srd_statblock
+iron cobra,5.0,29.5,14.0,29.5,dmg_cr_table
+iron consul,3.0,17.5,13.0,17.5,dmg_cr_table
+iron golem,13.0,43.0,19.0,45.0,srd_statblock
+jackal,1.0,0.5,13.0,0.5,srd_statblock
+jackalwere,3.0,7.0,13.0,7.0,dmg_cr_table
+jaculi,3.0,7.0,13.0,7.0,dmg_cr_table
+jarlaxle baenre,8.0,95.5,18.0,95.5,dmg_cr_table
+juiblex,11.0,185.5,20.0,185.5,dmg_cr_table
+kamadan,5.0,29.5,14.0,29.5,dmg_cr_table
+kenku,3.0,4.5,13.0,4.5,dmg_cr_table
+ki rin,8.0,77.5,17.0,77.5,dmg_cr_table
+killer whale,6.0,21.0,13.0,21.0,srd_statblock
+knight,5.0,15.0,13.0,15.0,srd_statblock
+kobold,4.0,4.0,13.0,4.0,srd_statblock
+kobold dragonshield,3.0,11.5,13.0,11.5,dmg_cr_table
+kobold inventor,3.0,4.5,13.0,4.5,dmg_cr_table
+kobold scale sorcerer,3.0,11.5,13.0,11.5,dmg_cr_table
+korred,6.0,47.5,15.0,47.5,dmg_cr_table
+kraken,17.0,93.0,25.0,93.0,srd_statblock
+kraken priest,6.0,35.5,15.0,35.5,dmg_cr_table
+kruthik hive lord,6.0,35.5,15.0,35.5,dmg_cr_table
+kuo toa,3.0,4.5,13.0,4.5,dmg_cr_table
+kuo toa archpriest,6.0,41.5,15.0,41.5,dmg_cr_table
+kuo toa whip,3.0,11.5,13.0,11.5,dmg_cr_table
+laeral silverhand,10.0,107.5,19.0,107.5,dmg_cr_table
+lamia,5.0,45.0,13.0,49.0,srd_statblock
+lemure,3.0,2.0,13.0,2.0,srd_statblock
+leucrotta,4.0,23.5,13.0,23.5,dmg_cr_table
+leviathan,10.0,131.5,19.0,131.5,dmg_cr_table
+lich,12.0,45.0,20.0,100.0,srd_statblock
+lion,5.0,6.5,13.0,6.5,srd_statblock
+lizard,0.0,1.0,13.0,1.0,srd_statblock
+lizard king queen,5.0,29.5,14.0,29.5,dmg_cr_table
+lizardfolk,4.0,10.0,13.0,10.0,srd_statblock
+lizardfolk shaman,3.0,17.5,13.0,17.5,dmg_cr_table
+mage,5.0,36.0,14.0,36.0,srd_statblock
+magma mephit,3.0,5.0,11.0,7.0,srd_statblock
+magmin,4.0,7.0,11.0,7.0,srd_statblock
+male steeder,3.0,4.5,13.0,4.5,dmg_cr_table
+mammoth,10.0,27.0,18.0,27.0,srd_statblock
+manes,3.0,2.5,13.0,2.5,dmg_cr_table
+manshoon,8.0,83.5,18.0,83.5,dmg_cr_table
+manticore,5.0,20.0,13.0,20.0,srd_statblock
+mantrap,3.0,11.5,13.0,11.5,dmg_cr_table
+marid,8.0,71.5,17.0,71.5,dmg_cr_table
+marilith,9.0,98.0,19.0,98.0,srd_statblock
+martial arts adept,4.0,23.5,13.0,23.5,dmg_cr_table
+marut,12.0,221.5,21.0,221.5,dmg_cr_table
+master of souls,5.0,29.5,14.0,29.5,dmg_cr_table
+master thief,6.0,35.5,15.0,35.5,dmg_cr_table
+mastiff,3.0,4.0,11.0,4.0,srd_statblock
+maurezhi,6.0,47.5,15.0,47.5,dmg_cr_table
+maw demon,3.0,11.5,13.0,11.5,dmg_cr_table
+meazel,3.0,11.5,13.0,11.5,dmg_cr_table
+medusa,5.0,24.0,14.0,24.0,srd_statblock
+meenlock,3.0,17.5,13.0,17.5,dmg_cr_table
+merfolk,2.0,4.0,13.0,4.0,srd_statblock
+merregon,5.0,29.5,14.0,29.5,dmg_cr_table
+merrenoloth,4.0,23.5,13.0,23.5,dmg_cr_table
+merrow,6.0,18.666666666666668,13.0,18.666666666666668,srd_statblock
+mezzoloth,6.0,35.5,15.0,35.5,dmg_cr_table
+mimic,5.0,9.0,13.0,9.0,srd_statblock
+mind flayer,6.0,47.5,15.0,47.5,dmg_cr_table
+mindwitness,6.0,35.5,15.0,35.5,dmg_cr_table
+minotaur,6.0,15.0,14.0,15.0,srd_statblock
+minotaur skeleton,6.0,15.0,14.0,15.0,srd_statblock
+moloch,11.0,149.5,20.0,149.5,dmg_cr_table
+molydeus,11.0,149.5,20.0,149.5,dmg_cr_table
+monodrone,3.0,2.5,13.0,2.5,dmg_cr_table
+morkoth,8.0,71.5,17.0,71.5,dmg_cr_table
+mouth of grolantor,6.0,41.5,15.0,41.5,dmg_cr_table
+mud mephit,3.0,4.5,13.0,4.5,dmg_cr_table
+mule,2.0,4.0,13.0,4.0,srd_statblock
+mummified warrior,3.0,4.5,13.0,4.5,dmg_cr_table
+mummy,5.0,20.0,12.0,20.0,srd_statblock
+mummy lord,9.0,45.0,17.0,49.0,srd_statblock
+myconid adult,3.0,7.0,13.0,7.0,dmg_cr_table
+myconid sovereign,3.0,17.5,13.0,17.5,dmg_cr_table
+myconid sprout,3.0,0.5,13.0,0.5,dmg_cr_table
+nabassu,8.0,95.5,18.0,95.5,dmg_cr_table
+nagpa,10.0,107.5,19.0,107.5,dmg_cr_table
+nalfeshnee,10.0,70.5,15.0,70.5,srd_statblock
+narzugon,8.0,83.5,18.0,83.5,dmg_cr_table
+necromancer,7.0,59.5,16.0,59.5,dmg_cr_table
+necromite of myrkul,3.0,7.0,13.0,7.0,dmg_cr_table
+needle blight,3.0,4.5,13.0,4.5,dmg_cr_table
+neogi,4.0,23.5,13.0,23.5,dmg_cr_table
+neogi hatchling,3.0,2.5,13.0,2.5,dmg_cr_table
+neogi master,5.0,29.5,14.0,29.5,dmg_cr_table
+neothelid,8.0,83.5,18.0,83.5,dmg_cr_table
+night blade,3.0,4.5,13.0,4.5,dmg_cr_table
+night hag,7.0,13.0,14.0,13.0,srd_statblock
+nightmare,6.0,20.0,13.0,20.0,srd_statblock
+nightwalker,10.0,131.5,19.0,131.5,dmg_cr_table
+nilbog,3.0,11.5,13.0,11.5,dmg_cr_table
+noble,3.0,5.0,13.0,5.0,srd_statblock
+nothic,4.0,45.0,12.0,49.0,srd_statblock
+nupperibo,3.0,7.0,13.0,7.0,dmg_cr_table
+nycaloth,7.0,59.5,16.0,59.5,dmg_cr_table
+oblex spawn,3.0,4.5,13.0,4.5,dmg_cr_table
+ochre jelly,4.0,12.0,13.0,12.0,srd_statblock
+octopus,4.0,1.0,10.0,1.0,srd_statblock
+ogre,6.0,12.0,13.0,12.0,srd_statblock
+ogre battering ram,5.0,29.5,14.0,29.5,dmg_cr_table
+ogre bolt launcher,3.0,17.5,13.0,17.5,dmg_cr_table
+ogre chain brute,4.0,23.5,13.0,23.5,dmg_cr_table
+ogre howdah,3.0,17.5,13.0,17.5,dmg_cr_table
+ogre zombie,6.0,13.0,13.0,13.0,srd_statblock
+ogremoch,10.0,131.5,19.0,131.5,dmg_cr_table
+oinoloth,8.0,77.5,17.0,77.5,dmg_cr_table
+olhydra,10.0,113.5,19.0,113.5,dmg_cr_table
+oni,7.0,45.0,13.0,49.0,srd_statblock
+orc,5.0,7.5,13.0,7.5,srd_statblock
+orc blade of ilneval,5.0,29.5,14.0,29.5,dmg_cr_table
+orc claw of luthic,3.0,17.5,13.0,17.5,dmg_cr_table
+orc eye of gruumsh,3.0,17.5,13.0,17.5,dmg_cr_table
+orc hand of yurtrus,3.0,17.5,13.0,17.5,dmg_cr_table
+orc red fang of shargaas,4.0,23.5,13.0,23.5,dmg_cr_table
+orc war chief,5.0,29.5,14.0,29.5,dmg_cr_table
+orcus,12.0,239.5,21.0,239.5,dmg_cr_table
+orog,3.0,17.5,13.0,17.5,dmg_cr_table
+orthon,7.0,65.5,16.0,65.5,dmg_cr_table
+otyugh,6.0,34.5,15.0,34.5,srd_statblock
+owl,3.0,1.0,13.0,1.0,srd_statblock
+owlbear,7.0,24.0,13.0,24.0,srd_statblock
+panther,4.0,4.5,12.0,4.5,srd_statblock
+pegasus,6.0,11.0,13.0,11.0,srd_statblock
+pentadrone,3.0,17.5,13.0,17.5,dmg_cr_table
+peryton,3.0,17.5,13.0,17.5,dmg_cr_table
+phase spider,4.0,25.0,11.0,25.0,srd_statblock
+phoenix,9.0,101.5,18.0,101.5,dmg_cr_table
+piercer,3.0,7.0,13.0,7.0,dmg_cr_table
+pit fiend,14.0,99.0,21.0,99.0,srd_statblock
+pixie,3.0,4.5,13.0,4.5,dmg_cr_table
+planetar,12.0,86.0,20.0,86.0,srd_statblock
+plesiosaurus,6.0,14.0,13.0,14.0,srd_statblock
+poisonous snake,5.0,5.0,10.0,5.0,srd_statblock
+polar bear,7.0,21.0,13.0,21.0,srd_statblock
+pony,4.0,7.0,13.0,7.0,srd_statblock
+priest,2.0,14.0,13.0,14.0,srd_statblock
+pseudodragon,4.0,4.0,11.0,4.0,srd_statblock
+pterafolk,3.0,11.5,13.0,11.5,dmg_cr_table
+pteranodon,3.0,6.0,13.0,6.0,srd_statblock
+purple worm,9.0,83.0,21.0,83.0,srd_statblock
+purple wormling,3.0,17.5,13.0,17.5,dmg_cr_table
+quadrone,3.0,11.5,13.0,11.5,dmg_cr_table
+quaggoth,3.0,17.5,13.0,17.5,dmg_cr_table
+quaggoth spore servant,3.0,11.5,13.0,11.5,dmg_cr_table
+quasit,4.0,5.0,10.0,5.0,srd_statblock
+quetzalcoatlus,3.0,17.5,13.0,17.5,dmg_cr_table
+quickling,3.0,11.5,13.0,11.5,dmg_cr_table
+quipper,5.0,1.0,13.0,1.0,srd_statblock
+rakshasa,7.0,45.0,18.0,49.0,srd_statblock
+rat,0.0,1.0,13.0,1.0,srd_statblock
+raven,4.0,1.0,10.0,1.0,srd_statblock
+reaper of bhaal,3.0,17.5,13.0,17.5,dmg_cr_table
+red abishai,10.0,119.5,19.0,119.5,dmg_cr_table
+red dragon wyrmling,6.0,12.0,13.0,24.0,srd_statblock
+red slaad,6.0,35.5,15.0,35.5,dmg_cr_table
+redcap,4.0,23.5,13.0,23.5,dmg_cr_table
+reef manta ray,3.0,7.0,13.0,7.0,dmg_cr_table
+reef shark,4.0,6.0,13.0,6.0,srd_statblock
+remorhaz,11.0,50.0,17.0,50.0,srd_statblock
+retriever,8.0,89.5,18.0,89.5,dmg_cr_table
+revenant,6.0,35.5,15.0,35.5,dmg_cr_table
+rhinoceros,7.0,14.0,15.0,14.0,srd_statblock
+riding horse,5.0,8.0,13.0,8.0,srd_statblock
+roc,13.0,50.0,19.0,50.0,srd_statblock
+roper,7.0,88.0,15.0,88.0,srd_statblock
+rot troll,7.0,59.5,16.0,59.5,dmg_cr_table
+rug of smothering,5.0,10.0,13.0,10.0,srd_statblock
+rust monster,3.0,5.0,11.0,5.0,srd_statblock
+rutterkin,3.0,17.5,13.0,17.5,dmg_cr_table
+saber toothed tiger,6.0,11.0,14.0,11.0,srd_statblock
+sahuagin,3.0,7.333333333333333,13.0,7.333333333333333,srd_statblock
+sahuagin baron,6.0,35.5,15.0,35.5,dmg_cr_table
+sahuagin priestess,3.0,17.5,13.0,17.5,dmg_cr_table
+salamander,7.0,34.0,14.0,34.0,srd_statblock
+satyr,5.0,6.0,13.0,6.0,srd_statblock
+scarecrow,3.0,11.5,13.0,11.5,dmg_cr_table
+scorpion,2.0,3.0,9.0,3.0,srd_statblock
+scout,4.0,11.0,13.0,11.0,srd_statblock
+sea hag,5.0,10.0,16.0,10.0,srd_statblock
+sea horse,3.0,0.5,13.0,0.5,dmg_cr_table
+sea spawn,3.0,11.5,13.0,11.5,dmg_cr_table
+shadow,4.0,9.0,13.0,9.0,srd_statblock
+shadow dancer,6.0,47.5,15.0,47.5,dmg_cr_table
+shadow demon,5.0,29.5,14.0,29.5,dmg_cr_table
+shadow mastiff,3.0,17.5,13.0,17.5,dmg_cr_table
+shambling mound,7.0,26.0,14.0,26.0,srd_statblock
+shield guardian,7.0,22.0,15.0,22.0,srd_statblock
+shoosuva,7.0,53.5,16.0,53.5,dmg_cr_table
+shrieker,3.0,0.5,13.0,0.5,dmg_cr_table
+sibriex,10.0,113.5,19.0,113.5,dmg_cr_table
+silver dragon wyrmling,6.0,9.0,13.0,18.0,srd_statblock
+skeleton,4.0,5.0,13.0,5.0,srd_statblock
+skulk,3.0,7.0,13.0,7.0,dmg_cr_table
+skull lasher of myrkul,3.0,11.5,13.0,11.5,dmg_cr_table
+skull lord,8.0,95.5,18.0,95.5,dmg_cr_table
+slaad tadpole,3.0,2.5,13.0,2.5,dmg_cr_table
+slithering tracker,4.0,23.5,13.0,23.5,dmg_cr_table
+smoke mephit,3.0,4.5,13.0,4.5,dmg_cr_table
+solar,15.0,91.0,25.0,91.0,srd_statblock
+soul monger,8.0,71.5,17.0,71.5,dmg_cr_table
+spawn of kyuss,6.0,35.5,15.0,35.5,dmg_cr_table
+spectator,1.0,16.0,13.0,16.0,srd_statblock
+specter,4.0,10.0,10.0,10.0,srd_statblock
+spellcaster healer lvl 1,3.0,0.5,13.0,0.5,dmg_cr_table
+spellcaster healer lvl 2,3.0,0.5,13.0,0.5,dmg_cr_table
+spellcaster healer lvl 3,3.0,0.5,13.0,0.5,dmg_cr_table
+spellcaster healer lvl 4,3.0,0.5,13.0,0.5,dmg_cr_table
+spellcaster healer lvl 5,3.0,0.5,13.0,0.5,dmg_cr_table
+spellcaster healer lvl 6,3.0,0.5,13.0,0.5,dmg_cr_table
+spellcaster mage lvl 1,3.0,0.5,13.0,0.5,dmg_cr_table
+spellcaster mage lvl 2,3.0,0.5,13.0,0.5,dmg_cr_table
+spellcaster mage lvl 3,3.0,0.5,13.0,0.5,dmg_cr_table
+spellcaster mage lvl 4,3.0,0.5,13.0,0.5,dmg_cr_table
+spellcaster mage lvl 5,3.0,0.5,13.0,0.5,dmg_cr_table
+spellcaster mage lvl 6,3.0,0.5,13.0,0.5,dmg_cr_table
+spider,4.0,2.0,9.0,2.0,srd_statblock
+spined devil,3.0,17.5,13.0,17.5,dmg_cr_table
+spirit naga,7.0,45.0,14.0,49.0,srd_statblock
+spirit troll,8.0,71.5,17.0,71.5,dmg_cr_table
+spring eladrin,7.0,65.5,16.0,65.5,dmg_cr_table
+sprite,6.0,1.125,10.0,1.125,srd_statblock
+spy,4.0,10.0,13.0,10.0,srd_statblock
+star spawn grue,3.0,4.5,13.0,4.5,dmg_cr_table
+star spawn hulk,7.0,65.5,16.0,65.5,dmg_cr_table
+star spawn larva mage,9.0,101.5,18.0,101.5,dmg_cr_table
+star spawn mangler,6.0,35.5,15.0,35.5,dmg_cr_table
+star spawn seer,8.0,83.5,18.0,83.5,dmg_cr_table
+steam mephit,2.0,4.0,10.0,4.0,srd_statblock
+steel predator,9.0,101.5,18.0,101.5,dmg_cr_table
+stegosaurus,5.0,29.5,14.0,29.5,dmg_cr_table
+stirge,5.0,5.0,13.0,5.0,srd_statblock
+stone cursed,3.0,11.5,13.0,11.5,dmg_cr_table
+stone giant,9.0,47.0,17.0,47.0,srd_statblock
+stone giant dreamwalker,7.0,65.5,16.0,65.5,dmg_cr_table
+stone golem,10.0,38.0,17.0,38.0,srd_statblock
+stone juggernaut,8.0,77.5,17.0,77.5,dmg_cr_table
+storm giant,14.0,65.0,17.0,65.0,srd_statblock
+storm giant quintessent,9.0,101.5,18.0,101.5,dmg_cr_table
+strahd von zarovich,8.0,95.5,18.0,95.5,dmg_cr_table
+su monster,3.0,11.5,13.0,11.5,dmg_cr_table
+succubus,5.0,29.5,14.0,29.5,dmg_cr_table
+summer eladrin,7.0,65.5,16.0,65.5,dmg_cr_table
+swarm of bats,4.0,5.0,13.0,5.0,srd_statblock
+swarm of cranium rats,6.0,35.5,15.0,35.5,dmg_cr_table
+swarm of insects,3.0,10.0,13.0,10.0,srd_statblock
+swarm of poisonous snakes,6.0,14.0,10.0,14.0,srd_statblock
+swarm of quippers,5.0,14.0,13.0,14.0,srd_statblock
+swarm of rats,2.0,7.0,13.0,7.0,srd_statblock
+swarm of ravens,4.0,7.0,13.0,7.0,srd_statblock
+swarm of rot grubs,3.0,7.0,13.0,7.0,dmg_cr_table
+swashbuckler,4.0,23.5,13.0,23.5,dmg_cr_table
+sword wraith commander,7.0,53.5,16.0,53.5,dmg_cr_table
+sword wraith warrior,4.0,23.5,13.0,23.5,dmg_cr_table
+tabaxi hunter,3.0,11.5,13.0,11.5,dmg_cr_table
+tabaxi minstrel,3.0,4.5,13.0,4.5,dmg_cr_table
+tanarukk,6.0,35.5,15.0,35.5,dmg_cr_table
+tarrasque,19.0,150.0,20.0,150.0,srd_statblock
+the angry,8.0,83.5,18.0,83.5,dmg_cr_table
+the hungry,8.0,71.5,17.0,71.5,dmg_cr_table
+the lonely,7.0,59.5,16.0,59.5,dmg_cr_table
+the lost,6.0,47.5,15.0,47.5,dmg_cr_table
+the wretched,3.0,4.5,13.0,4.5,dmg_cr_table
+thorny,3.0,11.5,13.0,11.5,dmg_cr_table
+thri kreen,3.0,11.5,13.0,11.5,dmg_cr_table
+thug,4.0,10.0,13.0,10.0,srd_statblock
+tiamat,14.0,311.5,23.0,311.5,dmg_cr_table
+tiger,5.0,7.5,13.0,7.5,srd_statblock
+titivilus,9.0,101.5,18.0,101.5,dmg_cr_table
+tlincalli,6.0,35.5,15.0,35.5,dmg_cr_table
+tortle,3.0,4.5,13.0,4.5,dmg_cr_table
+tortle druid,3.0,17.5,13.0,17.5,dmg_cr_table
+transmuter,6.0,35.5,15.0,35.5,dmg_cr_table
+trapper,4.0,23.5,13.0,23.5,dmg_cr_table
+treant,10.0,44.0,16.0,44.0,srd_statblock
+tri flower frond,3.0,7.0,13.0,7.0,dmg_cr_table
+tribal warrior,3.0,5.0,13.0,5.0,srd_statblock
+triceratops,9.0,23.0,13.0,23.0,srd_statblock
+tridrone,3.0,7.0,13.0,7.0,dmg_cr_table
+troglodyte,3.0,4.5,13.0,4.5,dmg_cr_table
+troll,7.0,27.0,15.0,27.0,srd_statblock
+twig blight,3.0,7.5,13.0,32.0,srd_statblock
+tyrannosaurus rex,10.0,53.0,17.0,53.0,srd_statblock
+ulitharid,7.0,59.5,16.0,59.5,dmg_cr_table
+ultroloth,8.0,83.5,18.0,83.5,dmg_cr_table
+umber hulk,6.0,35.5,15.0,35.5,dmg_cr_table
+unicorn,7.0,19.0,15.0,19.0,srd_statblock
+uthgardt shaman,3.0,17.5,13.0,17.5,dmg_cr_table
+vajra safahr,8.0,83.5,18.0,83.5,dmg_cr_table
+vampire,9.0,45.0,18.0,49.0,srd_statblock
+vampire spawn,6.0,45.0,13.0,49.0,srd_statblock
+vampiric mist,4.0,23.5,13.0,23.5,dmg_cr_table
+vargouille,3.0,11.5,13.0,11.5,dmg_cr_table
+vegepygmy,3.0,4.5,13.0,4.5,dmg_cr_table
+vegepygmy chief,3.0,17.5,13.0,17.5,dmg_cr_table
+velociraptor,3.0,4.5,13.0,4.5,dmg_cr_table
+venerable shadow,3.0,17.5,13.0,17.5,dmg_cr_table
+venom troll,6.0,47.5,15.0,47.5,dmg_cr_table
+veteran,5.0,13.333333333333334,13.0,13.333333333333334,srd_statblock
+vine blight,3.0,7.0,13.0,7.0,dmg_cr_table
+violet fungus,2.0,4.0,13.0,4.0,srd_statblock
+vrock,6.0,24.0,14.0,24.0,srd_statblock
+vulture,2.0,2.0,13.0,2.0,srd_statblock
+war priest,7.0,59.5,16.0,59.5,dmg_cr_table
+warhorse,6.0,11.0,14.0,11.0,srd_statblock
+warhorse skeleton,6.0,11.0,13.0,11.0,srd_statblock
+warlock of the archfey,5.0,29.5,14.0,29.5,dmg_cr_table
+warlock of the fiend,6.0,47.5,15.0,47.5,dmg_cr_table
+warlock of the great old one,6.0,41.5,15.0,41.5,dmg_cr_table
+warlord,8.0,77.5,17.0,77.5,dmg_cr_table
+warrior lvl 1,3.0,0.5,13.0,0.5,dmg_cr_table
+warrior lvl 2,3.0,0.5,13.0,0.5,dmg_cr_table
+warrior lvl 3,3.0,0.5,13.0,0.5,dmg_cr_table
+warrior lvl 4,3.0,0.5,13.0,0.5,dmg_cr_table
+warrior lvl 5,3.0,0.5,13.0,0.5,dmg_cr_table
+warrior lvl 6,3.0,0.5,13.0,0.5,dmg_cr_table
+wastrilith,8.0,83.5,18.0,83.5,dmg_cr_table
+water elemental,7.0,26.0,15.0,26.0,srd_statblock
+water elemental myrmidon,6.0,47.5,15.0,47.5,dmg_cr_table
+water weird,4.0,23.5,13.0,23.5,dmg_cr_table
+weasel,5.0,1.0,13.0,1.0,srd_statblock
+werebear,7.0,25.333333333333332,14.0,25.333333333333332,srd_statblock
+wereboar,5.0,20.0,13.0,20.0,srd_statblock
+wererat,4.0,9.333333333333334,11.0,9.333333333333334,srd_statblock
+weretiger,5.0,13.5,14.0,13.5,srd_statblock
+werewolf,4.0,12.666666666666666,12.0,12.666666666666666,srd_statblock
+white abishai,6.0,41.5,15.0,41.5,dmg_cr_table
+white dragon wyrmling,4.0,9.0,12.0,22.0,srd_statblock
+wight,4.0,12.0,13.0,12.0,srd_statblock
+wild dog,3.0,2.5,13.0,2.5,dmg_cr_table
+wild dog alpha,3.0,11.5,13.0,11.5,dmg_cr_table
+will o  wisp,3.0,17.5,13.0,17.5,dmg_cr_table
+winged kobold,3.0,4.5,13.0,4.5,dmg_cr_table
+winter eladrin,7.0,65.5,16.0,65.5,dmg_cr_table
+winter wolf,6.0,11.0,14.0,18.0,srd_statblock
+wolf,4.0,7.0,11.0,7.0,srd_statblock
+wood woad,6.0,35.5,15.0,35.5,dmg_cr_table
+worg,5.0,10.0,13.0,10.0,srd_statblock
+wraith,6.0,21.0,14.0,21.0,srd_statblock
+wyvern,7.0,39.333333333333336,15.0,39.333333333333336,srd_statblock
+xorn,6.0,28.5,15.0,28.5,srd_statblock
+xvart,3.0,2.5,13.0,2.5,dmg_cr_table
+xvart warlock of raxivort,3.0,11.5,13.0,11.5,dmg_cr_table
+yagnoloth,8.0,71.5,17.0,71.5,dmg_cr_table
+yan c bin,10.0,113.5,19.0,113.5,dmg_cr_table
+yeenoghu,12.0,203.5,21.0,203.5,dmg_cr_table
+yellow musk creeper,3.0,17.5,13.0,17.5,dmg_cr_table
+yellow musk zombie,3.0,4.5,13.0,4.5,dmg_cr_table
+yeth hound,5.0,29.5,14.0,29.5,dmg_cr_table
+yeti,6.0,20.0,13.0,20.0,srd_statblock
+yochlol,7.0,65.5,16.0,65.5,dmg_cr_table
+young black dragon,7.0,45.0,14.0,49.0,srd_statblock
+young blue dragon,9.0,49.5,16.0,55.0,srd_statblock
+young brass dragon,7.0,39.0,14.0,42.0,srd_statblock
+young bronze dragon,8.0,42.0,15.0,55.0,srd_statblock
+young copper dragon,7.0,39.0,14.0,40.0,srd_statblock
+young gold dragon,10.0,45.0,17.0,55.0,srd_statblock
+young green dragon,7.0,49.5,14.0,49.5,srd_statblock
+young kruthik,3.0,2.5,13.0,2.5,dmg_cr_table
+young red dragon,10.0,49.5,17.0,56.0,srd_statblock
+young red shadow dragon,8.0,83.5,18.0,83.5,dmg_cr_table
+young remorhaz,6.0,35.5,15.0,35.5,dmg_cr_table
+young silver dragon,10.0,45.0,17.0,54.0,srd_statblock
+young white dragon,7.0,45.0,15.0,45.0,srd_statblock
+yuan ti abomination,6.0,47.5,15.0,47.5,dmg_cr_table
+yuan ti anathema,8.0,77.5,17.0,77.5,dmg_cr_table
+yuan ti broodguard,3.0,17.5,13.0,17.5,dmg_cr_table
+yuan ti malison,4.0,23.5,13.0,23.5,dmg_cr_table
+yuan ti mind whisperer,5.0,29.5,14.0,29.5,dmg_cr_table
+yuan ti nightmare speaker,5.0,29.5,14.0,29.5,dmg_cr_table
+yuan ti pit master,6.0,35.5,15.0,35.5,dmg_cr_table
+yuan ti pureblood,3.0,11.5,13.0,11.5,dmg_cr_table
+zaratan,11.0,167.5,20.0,167.5,dmg_cr_table
+zariel,12.0,239.5,21.0,239.5,dmg_cr_table
+zombie,3.0,4.0,13.0,4.0,srd_statblock
+zuggtmoy,11.0,185.5,20.0,185.5,dmg_cr_table
