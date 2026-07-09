@@ -1,6 +1,8 @@
 # 🐉 D&D True Lethality Engine
 > **Predicting the True Danger of Dungeons & Dragons Combats through Machine Learning, Deep Mechanical Traits, & XGBoost**
 
+> 🇮🇹 **Guida completa in italiano** (sito, gioco, definizioni, modello): [README_IT.md](README_IT.md)
+
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Scikit-Learn](https://img.shields.io/badge/scikit--learn-0.24+-orange.svg)
 ![XGBoost](https://img.shields.io/badge/XGBoost-1.4+-green.svg)
