@@ -68,12 +68,17 @@ def _evaluate(pipe, X_test: pd.DataFrame, y_test: pd.Series) -> dict:
 def _fit_variant(name, X_tr, y_tr, g_tr, params) -> "Pipeline":
     """Production-identical fit: calibrated pipeline with grouped Platt folds."""
     cal = list(
-        StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42)
-        .split(np.zeros(len(y_tr)), y_tr, g_tr)
+        StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42).split(
+            np.zeros(len(y_tr)), y_tr, g_tr
+        )
     )
     pipe = build_model(params, calibrate=True, calibration_cv=cal)
-    LOGGER.info("Fitting %-4s variant on %d rows (base rate %.3f)",
-                name, len(y_tr), float(y_tr.mean()))
+    LOGGER.info(
+        "Fitting %-4s variant on %d rows (base rate %.3f)",
+        name,
+        len(y_tr),
+        float(y_tr.mean()),
+    )
     pipe.fit(X_tr, y_tr)
     return pipe
 
@@ -100,7 +105,8 @@ def main() -> int:
     if synth.empty:
         raise SystemExit(
             "No synthetic rows found — regenerate the CSV with the current "
-            "gan_trial.py (older versions did not tag encounter_id).")
+            "gan_trial.py (older versions did not tag encounter_id)."
+        )
     Xs = synth.reindex(columns=list(RAW_INPUT_COLUMNS))
     ys = synth["target"].astype(int)
     gs = pd.Series(["synthetic"] * len(synth))
@@ -130,10 +136,18 @@ def main() -> int:
 
     r, g = results["variants"]["real"], results["variants"]["gan_balanced"]
     LOGGER.info("Holdout base rate: %.3f", results["holdout_base_rate"])
-    LOGGER.info("real         AUC %.4f | Brier %.4f | mean p %.3f",
-                r["roc_auc"], r["brier"], r["mean_predicted_p"])
-    LOGGER.info("gan_balanced AUC %.4f | Brier %.4f | mean p %.3f",
-                g["roc_auc"], g["brier"], g["mean_predicted_p"])
+    LOGGER.info(
+        "real         AUC %.4f | Brier %.4f | mean p %.3f",
+        r["roc_auc"],
+        r["brier"],
+        r["mean_predicted_p"],
+    )
+    LOGGER.info(
+        "gan_balanced AUC %.4f | Brier %.4f | mean p %.3f",
+        g["roc_auc"],
+        g["brier"],
+        g["mean_predicted_p"],
+    )
     LOGGER.info("Wrote %s", out_path)
     return 0
 

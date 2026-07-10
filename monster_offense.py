@@ -45,53 +45,80 @@ LOGGER = logging.getLogger(__name__)
 # each CR, which makes it the principled imputation when a statblock is
 # unavailable.
 DMG_OFFENSE_BY_CR: Dict[float, Tuple[int, int, int, int]] = {
-    0.0:    (3, 0, 1, 13),
-    0.125:  (3, 2, 3, 13),
-    0.25:   (3, 4, 5, 13),
-    0.5:    (3, 6, 8, 13),
-    1.0:    (3, 9, 14, 13),
-    2.0:    (3, 15, 20, 13),
-    3.0:    (4, 21, 26, 13),
-    4.0:    (5, 27, 32, 14),
-    5.0:    (6, 33, 38, 15),
-    6.0:    (6, 39, 44, 15),
-    7.0:    (6, 45, 50, 15),
-    8.0:    (7, 51, 56, 16),
-    9.0:    (7, 57, 62, 16),
-    10.0:   (7, 63, 68, 16),
-    11.0:   (8, 69, 74, 17),
-    12.0:   (8, 75, 80, 17),
-    13.0:   (8, 81, 86, 18),
-    14.0:   (8, 87, 92, 18),
-    15.0:   (8, 93, 98, 18),
-    16.0:   (9, 99, 104, 18),
-    17.0:   (10, 105, 110, 19),
-    18.0:   (10, 111, 116, 19),
-    19.0:   (10, 117, 122, 19),
-    20.0:   (10, 123, 140, 19),
-    21.0:   (11, 141, 158, 20),
-    22.0:   (11, 159, 176, 20),
-    23.0:   (11, 177, 194, 20),
-    24.0:   (12, 195, 212, 21),
-    25.0:   (12, 213, 230, 21),
-    26.0:   (12, 231, 248, 21),
-    27.0:   (13, 249, 266, 22),
-    28.0:   (13, 267, 284, 22),
-    29.0:   (13, 285, 302, 22),
-    30.0:   (14, 303, 320, 23),
+    0.0: (3, 0, 1, 13),
+    0.125: (3, 2, 3, 13),
+    0.25: (3, 4, 5, 13),
+    0.5: (3, 6, 8, 13),
+    1.0: (3, 9, 14, 13),
+    2.0: (3, 15, 20, 13),
+    3.0: (4, 21, 26, 13),
+    4.0: (5, 27, 32, 14),
+    5.0: (6, 33, 38, 15),
+    6.0: (6, 39, 44, 15),
+    7.0: (6, 45, 50, 15),
+    8.0: (7, 51, 56, 16),
+    9.0: (7, 57, 62, 16),
+    10.0: (7, 63, 68, 16),
+    11.0: (8, 69, 74, 17),
+    12.0: (8, 75, 80, 17),
+    13.0: (8, 81, 86, 18),
+    14.0: (8, 87, 92, 18),
+    15.0: (8, 93, 98, 18),
+    16.0: (9, 99, 104, 18),
+    17.0: (10, 105, 110, 19),
+    18.0: (10, 111, 116, 19),
+    19.0: (10, 117, 122, 19),
+    20.0: (10, 123, 140, 19),
+    21.0: (11, 141, 158, 20),
+    22.0: (11, 159, 176, 20),
+    23.0: (11, 177, 194, 20),
+    24.0: (12, 195, 212, 21),
+    25.0: (12, 213, 230, 21),
+    26.0: (12, 231, 248, 21),
+    27.0: (13, 249, 266, 22),
+    28.0: (13, 267, 284, 22),
+    29.0: (13, 285, 302, 22),
+    30.0: (14, 303, 320, 23),
 }
 
 _CR_KEYS = sorted(DMG_OFFENSE_BY_CR)
 
 # ── DMG p.274: CR -> XP reward (canonical copy for the whole project) ──────
 CR_TO_XP: Dict[float, int] = {
-    0: 10, 0.125: 25, 0.25: 50, 0.5: 100,
-    1: 200, 2: 450, 3: 700, 4: 1100, 5: 1800,
-    6: 2300, 7: 2900, 8: 3900, 9: 5000, 10: 5900,
-    11: 7200, 12: 8400, 13: 10000, 14: 11500, 15: 13000,
-    16: 15000, 17: 18000, 18: 20000, 19: 22000, 20: 25000,
-    21: 33000, 22: 41000, 23: 50000, 24: 62000, 25: 75000,
-    26: 90000, 27: 105000, 28: 120000, 29: 135000, 30: 155000,
+    0: 10,
+    0.125: 25,
+    0.25: 50,
+    0.5: 100,
+    1: 200,
+    2: 450,
+    3: 700,
+    4: 1100,
+    5: 1800,
+    6: 2300,
+    7: 2900,
+    8: 3900,
+    9: 5000,
+    10: 5900,
+    11: 7200,
+    12: 8400,
+    13: 10000,
+    14: 11500,
+    15: 13000,
+    16: 15000,
+    17: 18000,
+    18: 20000,
+    19: 22000,
+    20: 25000,
+    21: 33000,
+    22: 41000,
+    23: 50000,
+    24: 62000,
+    25: 75000,
+    26: 90000,
+    27: 105000,
+    28: 120000,
+    29: 135000,
+    30: 155000,
 }
 
 _XP_KEYS = sorted(CR_TO_XP)
@@ -178,9 +205,7 @@ OFFICIAL_TRAIT_REGEX: Dict[str, Tuple[str, str]] = {
 }
 
 
-def extract_official_traits(
-    wri: pd.Series, additional: pd.Series
-) -> pd.DataFrame:
+def extract_official_traits(wri: pd.Series, additional: pd.Series) -> pd.DataFrame:
     """Six binary deep-trait flags from the official-stats WRI/Additional text.
 
     Accepts raw (possibly NaN) Series; lowercasing and fill happen here so
@@ -207,21 +232,37 @@ def extract_legendary_mobility(
     return pd.DataFrame(
         {
             "is_legendary": add.str.contains("legendary", na=False).astype(int),
-            "has_mobility": spd.str.contains("fly|swim", regex=True, na=False).astype(int),
+            "has_mobility": spd.str.contains("fly|swim", regex=True, na=False).astype(
+                int
+            ),
         }
     )
 
+
 _NUMBER_WORDS = {
-    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
-    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
 }
 
 _TAG_RE = re.compile(r"<[^>]+>")
 _ATK_BONUS_RE = re.compile(r"([+-]\s?\d+)\s+to\s+hit", re.IGNORECASE)
 # Printed average damage: "12 (2d6 + 5) bludgeoning damage"
-_AVG_DMG_RE = re.compile(r"(\d+)\s*\(\d+d\d+(?:\s*[+-]\s*\d+)?\)\s*[a-z ]*damage", re.IGNORECASE)
+_AVG_DMG_RE = re.compile(
+    r"(\d+)\s*\(\d+d\d+(?:\s*[+-]\s*\d+)?\)\s*[a-z ]*damage", re.IGNORECASE
+)
 # Flat damage with no dice expression: "1 piercing damage"
-_FLAT_DMG_RE = re.compile(r"\b(\d+)\s+(?:acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\s+damage", re.IGNORECASE)
+_FLAT_DMG_RE = re.compile(
+    r"\b(\d+)\s+(?:acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\s+damage",
+    re.IGNORECASE,
+)
 _SAVE_DC_RE = re.compile(r"\bDC\s+(\d+)", re.IGNORECASE)
 _MULTIATTACK_MAKES_RE = re.compile(
     r"makes\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d+)", re.IGNORECASE
@@ -239,7 +280,7 @@ _SAVE_CONTEXT_RE = re.compile(r"saving\s+throw|succeed\s+on\s+a\s+DC", re.IGNORE
 # damage — this is how a Lich's Power Word Kill enters the burst feature.
 SPELL_DAMAGE: Dict[str, float] = {
     "meteor swarm": 140.0,
-    "power word kill": 100.0,      # flat 100: kills any creature <= 100 HP
+    "power word kill": 100.0,  # flat 100: kills any creature <= 100 HP
     "disintegrate": 75.0,
     "finger of death": 62.0,
     "delayed blast fireball": 49.0,
@@ -306,7 +347,7 @@ def _parse_multiattack_count(actions_text: str) -> int:
     if idx == -1:
         return 1
     # Only look at the Multiattack sentence(s), not the whole action list.
-    segment = actions_text[idx: idx + 300]
+    segment = actions_text[idx : idx + 300]
     m = _MULTIATTACK_MAKES_RE.search(segment)
     if not m:
         return 2  # Multiattack exists but count unparsed: minimum meaningful value
@@ -357,7 +398,7 @@ def _damage_values(segment: str) -> List[float]:
         if i == 0:
             values.append(val)
             continue
-        gap = segment[matches[i - 1].end(): m.start()].lower()
+        gap = segment[matches[i - 1].end() : m.start()].lower()
         if re.search(r"\bor\b", gap):
             values[-1] = max(values[-1], val)  # alternative, not a rider
         else:
@@ -425,7 +466,13 @@ def parse_statblock_offense(
 
     spell_burst = _scan_spell_damage(full_text)
 
-    if not bonuses and not weapon_damages and not save_bursts and not dcs and not spell_burst:
+    if (
+        not bonuses
+        and not weapon_damages
+        and not save_bursts
+        and not dcs
+        and not spell_burst
+    ):
         return None
 
     table_atk, table_dpr, table_dc = offense_from_cr(cr)
@@ -448,9 +495,7 @@ def parse_statblock_offense(
         dpr = float(np.clip(dpr, 0.25 * max(table_dpr, 1.0), 3.0 * max(table_dpr, 1.0)))
 
     # Nova: the single scariest thing this monster can do in one action.
-    burst = max(
-        [dpr] + save_bursts + ([spell_burst] if spell_burst else [])
-    )
+    burst = max([dpr] + save_bursts + ([spell_burst] if spell_burst else []))
 
     return {
         "atk_bonus": atk_bonus,
@@ -525,7 +570,14 @@ def build_offense_table(
     except (FileNotFoundError, json.JSONDecodeError) as exc:
         LOGGER.warning("SRD statblocks unavailable (%s); using DMG CR table only.", exc)
         srd = pd.DataFrame(
-            columns=["clean_name", "atk_bonus", "dpr", "save_dc", "burst_dmg", "offense_source"]
+            columns=[
+                "clean_name",
+                "atk_bonus",
+                "dpr",
+                "save_dc",
+                "burst_dmg",
+                "offense_source",
+            ]
         )
 
     merged = base.merge(srd, on="clean_name", how="left")
@@ -543,10 +595,14 @@ def build_offense_table(
     n_parsed = (merged["offense_source"] == "srd_statblock").sum()
     LOGGER.info(
         "Offense table: %d/%d monsters from real statblocks, %d imputed from DMG CR table.",
-        n_parsed, len(merged), len(merged) - n_parsed,
+        n_parsed,
+        len(merged),
+        len(merged) - n_parsed,
     )
 
-    out = merged[["clean_name", "atk_bonus", "dpr", "save_dc", "burst_dmg", "offense_source"]]
+    out = merged[
+        ["clean_name", "atk_bonus", "dpr", "save_dc", "burst_dmg", "offense_source"]
+    ]
     if output_csv:
         out.to_csv(output_csv, index=False)
         LOGGER.info("Wrote offense table -> %s", output_csv)

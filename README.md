@@ -133,10 +133,10 @@ A key empirical finding: real parties win **83% of resolved fights** — DMs cur
 The mercy problem cuts deepest where the model needs data most: in fights the damage math says are *hopeless* (party deleted in ≤1 round), real tables still “won” **84.5%** of the time — fudged rolls, retreats relabeled, reinforcements. Trained on that, the raw model rated **19 Liches as beatable by a level-8 party**. No amount of learning fixes this, because the observational data cannot answer the app's counterfactual question (“fight to the death”). The engine therefore applies an explicit physics layer in `predict_win_for_parties`:
 
 ```
-P(win) ≤ sigmoid(2.197 · rounds_to_kill_party − 4.394)
+P(win) ≤ sigmoid(1.630 · rounds_to_kill_party − 3.977)
 ```
 
-anchored so that a party deleted in 1 round caps at 10%, 2 rounds at 50%, 3 rounds at 90% — and the cap is inert (>99.8%) for any encounter the party survives 5+ rounds, i.e. everywhere the model's training data is trustworthy. The cap uses the same feature math the model trains on, is smooth, monotone in level, and decreasing in roster damage, so every engine guarantee (binary-search validity, count monotonicity, roster dominance) survives. Result: 1 Lich → level 3.25, 4 → 10.75, 8 → 19, **11+ → beyond deadly**. Pinned by `tests/test_survival_guard.py` and `behavior_suite.py` check 3b.
+The constants are **calibrated against external deathmatch simulation**, not hand-tuned: a logistic fit of simulated P(win) on `rounds_to_kill_party` over a 180-cell Battlecast grid (boss CR {5,10,15,21} × count {1…19} × party level {1…20}, 2,000 Monte Carlo trials per cell — `battlecast_bridge/`, `figures/battlecast_guard_fit.png`). Fitted caps: 1 round of survival → 9%, 2 rounds → 33%, 3 rounds → 71%; inert above ~3.7 rounds where the model's own ceiling takes over — i.e. everywhere the training data is trustworthy. (The original hand-tuned anchors 0.10/0.50/0.90 proved slightly too generous in the 2–3-round zone.) The cap uses the same feature math the model trains on, is smooth, monotone in level, and decreasing in roster damage, so every engine guarantee (binary-search validity, count monotonicity, roster dominance) survives. Result: 1 Lich → level 3.25, 2 → 6.75, 4 → 12.75, **8+ → beyond deadly**. Pinned by `tests/test_survival_guard.py` and `behavior_suite.py` check 3b.
 
 ### The model-selection lesson (prediction ≠ decision)
 

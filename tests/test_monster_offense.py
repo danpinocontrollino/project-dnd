@@ -34,12 +34,15 @@ FLAME_RIDER = (
 
 class TestVersatileWeaponFix:
     def test_alternative_damage_is_maxed_not_summed(self):
-        assert _damage_values("7 (1d8 + 3) slashing damage, or 8 (1d10 + 3) "
-                              "slashing damage if used with two hands") == [8.0]
+        assert _damage_values(
+            "7 (1d8 + 3) slashing damage, or 8 (1d10 + 3) "
+            "slashing damage if used with two hands"
+        ) == [8.0]
 
     def test_rider_damage_is_still_separate(self):
-        assert _damage_values("7 (1d8 + 3) slashing damage plus 3 (1d6) "
-                              "fire damage") == [7.0, 3.0]
+        assert _damage_values(
+            "7 (1d8 + 3) slashing damage plus 3 (1d6) " "fire damage"
+        ) == [7.0, 3.0]
 
     def test_full_statblock_versatile(self):
         res = parse_statblock_offense(LONGSWORD, "", cr=1)
@@ -58,9 +61,12 @@ class TestMultiattack:
         assert _parse_multiattack_count("Bite. +4 to hit.") == 1
 
     def test_word_count(self):
-        assert _parse_multiattack_count(
-            "Multiattack. The dragon makes three attacks: one bite, two claws."
-        ) == 3
+        assert (
+            _parse_multiattack_count(
+                "Multiattack. The dragon makes three attacks: one bite, two claws."
+            )
+            == 3
+        )
 
     def test_unparsed_defaults_to_two(self):
         assert _parse_multiattack_count("Multiattack. A flurry of blows.") == 2
@@ -107,8 +113,9 @@ class TestXpMultiplier:
 
     def test_standard_party_unchanged(self):
         for n in (1, 2, 5, 12):
-            assert encounter_xp_multiplier(n, party_size=4) == \
-                encounter_xp_multiplier(n)
+            assert encounter_xp_multiplier(n, party_size=4) == encounter_xp_multiplier(
+                n
+            )
 
     def test_nan_party_size_ignored(self):
         assert encounter_xp_multiplier(2, party_size=float("nan")) == 1.5
@@ -118,7 +125,11 @@ class TestTraitExtraction:
     def test_all_six_flags(self):
         wri = pd.Series(["nonmagicalres stunnedimmu", "", None])
         add = pd.Series(
-            ["magic resistance. pack tactics.", "innate spellcasting, regenerates", None]
+            [
+                "magic resistance. pack tactics.",
+                "innate spellcasting, regenerates",
+                None,
+            ]
         )
         t = extract_official_traits(wri, add)
         assert t.loc[0].tolist() == [1, 1, 1, 1, 0, 0]
@@ -151,8 +162,10 @@ class TestStatblockEdgeCases:
 
     def test_dpr_clamped_to_dmg_band(self):
         # A CR-1 monster can't have DPR 400 no matter what the regex reads.
-        crazy = ("<p><em><strong>Doom.</strong></em> +4 to hit. "
-                 "<em>Hit:</em> 400 (40d20) necrotic damage.</p>")
+        crazy = (
+            "<p><em><strong>Doom.</strong></em> +4 to hit. "
+            "<em>Hit:</em> 400 (40d20) necrotic damage.</p>"
+        )
         res = parse_statblock_offense(crazy, "", cr=1)
         _, table_dpr, _ = offense_from_cr(1)
         assert res["dpr"] <= 3.0 * table_dpr

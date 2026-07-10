@@ -241,6 +241,7 @@ FEATURE_COLUMNS: Tuple[str, ...] = (
 # Coarse but *ordered* heuristics: XGBoost only needs the relative geometry
 # of the fight to be right, not the exact numbers.
 
+
 def _party_proficiency(level: pd.Series) -> pd.Series:
     return 2 + ((level.clip(1, 20) - 1) // 4)
 
@@ -308,9 +309,7 @@ class DnDFeatureEngineer(BaseEstimator, TransformerMixin):
         if "max_monster_cr" not in out.columns:
             out["max_monster_cr"] = out["avg_monster_cr"]
         else:
-            out["max_monster_cr"] = out["max_monster_cr"].fillna(
-                out["avg_monster_cr"]
-            )
+            out["max_monster_cr"] = out["max_monster_cr"].fillna(out["avg_monster_cr"])
         if "total_monster_hp" not in out.columns:
             out["total_monster_hp"] = out["avg_monster_hp"] * n
         else:
@@ -412,11 +411,16 @@ class DnDFeatureEngineer(BaseEstimator, TransformerMixin):
                 out[flag] = present.astype(int)
 
         for col in (
-            "monster_is_legendary", "monster_has_mobility",
-            "avg_monster_size_num", "avg_monster_stat_sum",
-            "monster_has_physical_res", "monster_immune_to_cc",
-            "monster_has_magic_res", "monster_has_pack_tactics",
-            "monster_has_spellcasting", "monster_has_regeneration",
+            "monster_is_legendary",
+            "monster_has_mobility",
+            "avg_monster_size_num",
+            "avg_monster_stat_sum",
+            "monster_has_physical_res",
+            "monster_immune_to_cc",
+            "monster_has_magic_res",
+            "monster_has_pack_tactics",
+            "monster_has_spellcasting",
+            "monster_has_regeneration",
         ):
             if col not in out.columns:
                 out[col] = 0
@@ -438,9 +442,9 @@ class DnDFeatureEngineer(BaseEstimator, TransformerMixin):
         out["true_party_power"] = out["party_size"] * (
             out["avg_party_level"] ** self.power_exponent
         )
-        out["cr_to_party_power"] = (
-            out["avg_monster_cr"] * out["num_monsters"]
-        ) / out["true_party_power"].replace(0, np.nan)
+        out["cr_to_party_power"] = (out["avg_monster_cr"] * out["num_monsters"]) / out[
+            "true_party_power"
+        ].replace(0, np.nan)
 
         # ── Legacy relational interactions ────────────────────────────────
         # Mobility punishes parties with no reliable ranged answer: neither
@@ -486,8 +490,8 @@ class DnDFeatureEngineer(BaseEstimator, TransformerMixin):
             + 0.25 * out["monster_has_regeneration"]
         )
         party_dpr = party_size * _party_dpr_per_member(level)
-        party_hp = party_size * _party_hp_per_member(level) * (
-            1.0 + 0.25 * out["has_healer"]
+        party_hp = (
+            party_size * _party_hp_per_member(level) * (1.0 + 0.25 * out["has_healer"])
         )
         # Pack tactics grants advantage: ~+40% effective hit rate.
         monster_effective_dpr = (
@@ -497,7 +501,8 @@ class DnDFeatureEngineer(BaseEstimator, TransformerMixin):
         )
 
         out["rounds_to_kill_monster"] = (
-            effective_monster_hp / (party_dpr * out["party_hit_chance"]).replace(0, np.nan)
+            effective_monster_hp
+            / (party_dpr * out["party_hit_chance"]).replace(0, np.nan)
         ).clip(upper=50)
         out["rounds_to_kill_party"] = (
             party_hp / monster_effective_dpr.replace(0, np.nan)
@@ -505,7 +510,8 @@ class DnDFeatureEngineer(BaseEstimator, TransformerMixin):
         # >0 means the party wins the damage race; the single most important
         # quantity in 5e combat.  Log keeps it symmetric around 0.
         out["lethality_log_ratio"] = np.log(
-            out["rounds_to_kill_party"] / out["rounds_to_kill_monster"].replace(0, np.nan)
+            out["rounds_to_kill_party"]
+            / out["rounds_to_kill_monster"].replace(0, np.nan)
         ).clip(-4, 4)
 
         # Save DC vs a typical mid save bonus (~2 + level/4).
@@ -605,11 +611,14 @@ def prepare_xy(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, pd.Series]:
         df["target"] = (df["final_outcome"] == "Party Win").astype(int)
         df = engineer_features(df)
     else:
-        df = df.dropna(subset=["avg_monster_cr", "avg_monster_hp", "avg_monster_ac"]).copy()
+        df = df.dropna(
+            subset=["avg_monster_cr", "avg_monster_hp", "avg_monster_ac"]
+        ).copy()
         LOGGER.info("GAN-balanced format detected (no final_outcome column).")
 
     core_required = [
-        c for c in RAW_INPUT_COLUMNS
+        c
+        for c in RAW_INPUT_COLUMNS
         if c in df.columns and c not in OPTIONAL_RAW_COLUMNS
     ]
     df = df.dropna(subset=core_required + ["target"])
@@ -686,7 +695,9 @@ MONOTONE_CONSTRAINTS: Dict[str, int] = {
 }
 
 
-def _make_xgb(params: Dict[str, Any], scale_pos_weight: float = 1.0) -> xgb.XGBClassifier:
+def _make_xgb(
+    params: Dict[str, Any], scale_pos_weight: float = 1.0
+) -> xgb.XGBClassifier:
     constraints = tuple(MONOTONE_CONSTRAINTS.get(c, 0) for c in FEATURE_COLUMNS)
     return xgb.XGBClassifier(
         objective="binary:logistic",
@@ -846,6 +857,7 @@ def tune_hyperparameters(
 
 # ── Plotting ───────────────────────────────────────────────────────────────
 
+
 def _use_clean_grid_style() -> None:
     try:
         plt.style.use("seaborn-v0_8-whitegrid")
@@ -864,9 +876,11 @@ def plot_feature_importances(
     fig, ax = plt.subplots(figsize=(9, 9), dpi=300)
     palette = sns.color_palette("mako", n_colors=len(features))
     ax.barh(
-        y_pos, importances[order],
+        y_pos,
+        importances[order],
         color=[palette[i] for i in range(len(features))],
-        edgecolor="black", linewidth=0.3,
+        edgecolor="black",
+        linewidth=0.3,
     )
     ax.set_yticks(y_pos)
     ax.set_yticklabels([features[i] for i in order], fontsize=7)
@@ -908,8 +922,13 @@ def plot_shap_summary(
         norm = np.clip((raw - lo) / (hi - lo + 1e-9), 0, 1)
         jitter = rng.normal(0, 0.08, size=len(vals))
         sc = ax.scatter(
-            vals, np.full(len(vals), i) + jitter,
-            c=norm, cmap="coolwarm", s=4, alpha=0.35, linewidths=0,
+            vals,
+            np.full(len(vals), i) + jitter,
+            c=norm,
+            cmap="coolwarm",
+            s=4,
+            alpha=0.35,
+            linewidths=0,
         )
     ax.set_yticks(range(len(top)))
     ax.set_yticklabels(list(reversed(top)), fontsize=8)
@@ -934,8 +953,9 @@ def plot_calibration_curve(
     _use_clean_grid_style()
     fig, ax = plt.subplots(figsize=(6.5, 6), dpi=300)
     ax.plot([0, 1], [0, 1], "--", color="gray", label="Perfect calibration")
-    ax.plot(agg["mean_pred"], agg["frac_pos"], marker="o", color="#1b9e77",
-            label="Model")
+    ax.plot(
+        agg["mean_pred"], agg["frac_pos"], marker="o", color="#1b9e77", label="Model"
+    )
     ax.set_xlabel("Predicted P(Party Win)")
     ax.set_ylabel("Observed win frequency")
     ax.set_title("Calibration on held-out campaigns")
@@ -957,9 +977,17 @@ def plot_correlation_heatmap(
         sns.set_theme(style="white")
     fig, ax = plt.subplots(figsize=(13, 11), dpi=300)
     sns.heatmap(
-        corr, mask=mask, annot=True, fmt=".2f", cmap="vlag", center=0,
-        square=True, linewidths=0.4, annot_kws={"size": 4.5},
-        cbar_kws={"shrink": 0.75, "label": "Spearman ρ"}, ax=ax,
+        corr,
+        mask=mask,
+        annot=True,
+        fmt=".2f",
+        cmap="vlag",
+        center=0,
+        square=True,
+        linewidths=0.4,
+        annot_kws={"size": 4.5},
+        cbar_kws={"shrink": 0.75, "label": "Spearman ρ"},
+        ax=ax,
     )
     ax.tick_params(labelsize=6)
     ax.set_title("Spearman correlation among engineered features")
@@ -977,7 +1005,9 @@ def plot_win_probability_curve(
     n_bins: int = 18,
 ) -> None:
     """Binned empirical win rate vs cr_to_party_level with model overlay."""
-    proba_win = pipe.predict_proba(df[[c for c in RAW_INPUT_COLUMNS if c in df.columns]])[:, 1]
+    proba_win = pipe.predict_proba(
+        df[[c for c in RAW_INPUT_COLUMNS if c in df.columns]]
+    )[:, 1]
     tmp = df.assign(p_win_hat=proba_win, cr_ratio=df["cr_to_party_level"]).dropna(
         subset=["cr_ratio"]
     )
@@ -995,16 +1025,34 @@ def plot_win_probability_curve(
 
     _use_clean_grid_style()
     fig, ax = plt.subplots(figsize=(9.5, 6), dpi=300)
-    ax.plot(agg["cr_mid"], agg["empirical_win_rate"], marker="o", linewidth=2,
-            label="Empirical win rate (binned)", color="#1b9e77")
-    ax.plot(agg["cr_mid"], agg["mean_predicted"], marker="s", linewidth=2,
-            linestyle="--", label="Calibrated XGBoost mean P(Party Win)",
-            color="#d95f02")
+    ax.plot(
+        agg["cr_mid"],
+        agg["empirical_win_rate"],
+        marker="o",
+        linewidth=2,
+        label="Empirical win rate (binned)",
+        color="#1b9e77",
+    )
+    ax.plot(
+        agg["cr_mid"],
+        agg["mean_predicted"],
+        marker="s",
+        linewidth=2,
+        linestyle="--",
+        label="Calibrated XGBoost mean P(Party Win)",
+        color="#d95f02",
+    )
     ax2 = ax.twinx()
     mids = agg["cr_mid"].to_numpy(dtype=float)
     width = float(np.ptp(mids) / max(len(agg) * 2.5, 1)) if mids.size else 0.01
-    ax2.bar(agg["cr_mid"], agg["n"], width=width, alpha=0.15, color="gray",
-            label="Encounters per bin")
+    ax2.bar(
+        agg["cr_mid"],
+        agg["n"],
+        width=width,
+        alpha=0.15,
+        color="gray",
+        label="Encounters per bin",
+    )
     ax2.set_ylabel("Count per bin")
     ax.set_xlabel(r"Encounter ratio: monster CR burden $\div$ total party level")
     ax.set_ylabel("Probability of Party Win")
@@ -1021,6 +1069,7 @@ def plot_win_probability_curve(
 
 # ── Training ───────────────────────────────────────────────────────────────
 
+
 def plot_logistic_coefficients(
     pipe: Pipeline, features: Sequence[str], out_path: str
 ) -> None:
@@ -1034,8 +1083,13 @@ def plot_logistic_coefficients(
     _use_clean_grid_style()
     fig, ax = plt.subplots(figsize=(9, 9), dpi=300)
     colors = ["#d03b3b" if c < 0 else "#2a78d6" for c in coefs[order]]
-    ax.barh(np.arange(len(features)), coefs[order], color=colors,
-            edgecolor="black", linewidth=0.3)
+    ax.barh(
+        np.arange(len(features)),
+        coefs[order],
+        color=colors,
+        edgecolor="black",
+        linewidth=0.3,
+    )
     ax.set_yticks(np.arange(len(features)))
     ax.set_yticklabels([features[i] for i in order], fontsize=7)
     ax.axvline(0, color="black", linewidth=0.8)
@@ -1082,10 +1136,15 @@ def _append_experiment_record(figures_dir: str, metrics: Dict[str, Any]) -> None
     import subprocess
 
     try:
-        commit = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, timeout=5,
-        ).stdout.strip() or None
+        commit = (
+            subprocess.run(
+                ["git", "rev-parse", "--short", "HEAD"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            ).stdout.strip()
+            or None
+        )
     except (OSError, subprocess.SubprocessError):
         commit = None
 
@@ -1118,7 +1177,9 @@ def run_training(
     X, y, groups = prepare_xy(raw)
     LOGGER.info(
         "Training matrix: %s | base rate P(win)=%.3f | %d campaign groups",
-        X.shape, y.mean(), groups.nunique(),
+        X.shape,
+        y.mean(),
+        groups.nunique(),
     )
 
     # Group-aware holdout: test campaigns are never seen in training.
@@ -1132,7 +1193,9 @@ def run_training(
     if model_type != "xgb":
         # Logistic has one hyperparameter (C), fixed from a grouped-CV sweep.
         if tune:
-            LOGGER.info("model_type=%s: Optuna applies to XGBoost only; skipping.", model_type)
+            LOGGER.info(
+                "model_type=%s: Optuna applies to XGBoost only; skipping.", model_type
+            )
     elif tune:
         LOGGER.info("Tuning hyperparameters with Optuna (%d trials)...", n_trials)
         params = tune_hyperparameters(
@@ -1146,18 +1209,23 @@ def run_training(
     cv = StratifiedGroupKFold(n_splits=4, shuffle=True, random_state=42)
     cv_auc = cross_val_score(
         build_model(params, model_type=model_type, calibrate=False),
-        X_train, y_train, groups=g_train, cv=cv, scoring="roc_auc", n_jobs=1,
+        X_train,
+        y_train,
+        groups=g_train,
+        cv=cv,
+        scoring="roc_auc",
+        n_jobs=1,
     )
-    LOGGER.info("CV ROC-AUC (unseen campaigns): %.4f ± %.4f", cv_auc.mean(), cv_auc.std())
+    LOGGER.info(
+        "CV ROC-AUC (unseen campaigns): %.4f ± %.4f", cv_auc.mean(), cv_auc.std()
+    )
 
     # Group-aware calibration folds: the calibrator would otherwise use
     # random stratified folds, leaking same-campaign encounters between the
     # base-model fit and the Platt fit (positional indices stay valid because
     # the pipeline transforms preserve row order).
     cal_splitter = StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42)
-    cal_cv = list(
-        cal_splitter.split(np.zeros(len(y_train)), y_train, g_train)
-    )
+    cal_cv = list(cal_splitter.split(np.zeros(len(y_train)), y_train, g_train))
     pipe = build_model(
         params, model_type=model_type, calibrate=True, calibration_cv=cal_cv
     )
@@ -1187,10 +1255,14 @@ def run_training(
     LOGGER.info(
         "Holdout — acc %.4f | ROC-AUC %.4f [%.3f, %.3f] | PR-AUC %.4f | "
         "Brier %.4f [%.3f, %.3f] | logloss %.4f",
-        metrics["holdout_accuracy"], metrics["holdout_roc_auc"],
-        auc_ci[0], auc_ci[1],
-        metrics["holdout_pr_auc"], metrics["holdout_brier"],
-        brier_ci[0], brier_ci[1],
+        metrics["holdout_accuracy"],
+        metrics["holdout_roc_auc"],
+        auc_ci[0],
+        auc_ci[1],
+        metrics["holdout_pr_auc"],
+        metrics["holdout_brier"],
+        brier_ci[0],
+        brier_ci[1],
         metrics["holdout_log_loss"],
     )
     LOGGER.info("\n%s", classification_report(y_test, y_pred, digits=3))
@@ -1206,7 +1278,8 @@ def run_training(
     # production model we additionally plot its standardized coefficients.
     if model_type == "logistic":
         plot_logistic_coefficients(
-            pipe, FEATURE_COLUMNS,
+            pipe,
+            FEATURE_COLUMNS,
             os.path.join(figures_dir, "logistic_coefficients.png"),
         )
     engineer = pipe.named_steps["feature_engineer"]
@@ -1244,7 +1317,9 @@ def run_training(
         if col not in df_model.columns and col in X.columns:
             df_model[col] = X[col].values
     plot_correlation_heatmap(
-        df_model, FEATURE_COLUMNS, os.path.join(figures_dir, "feature_correlation_heatmap.png")
+        df_model,
+        FEATURE_COLUMNS,
+        os.path.join(figures_dir, "feature_correlation_heatmap.png"),
     )
     plot_win_probability_curve(
         df_model, pipe, os.path.join(figures_dir, "win_rate_vs_cr_ratio.png")
@@ -1295,7 +1370,14 @@ def _prepare_cr_dataset(official_csv: str) -> pd.DataFrame:
     df["hp"] = pd.to_numeric(df["HP"], errors="coerce")
     df["ac"] = pd.to_numeric(df["AC"], errors="coerce")
 
-    size_map = {"tiny": 1, "small": 2, "medium": 3, "large": 4, "huge": 5, "gargantuan": 6}
+    size_map = {
+        "tiny": 1,
+        "small": 2,
+        "medium": 3,
+        "large": 4,
+        "huge": 5,
+        "gargantuan": 6,
+    }
     df["size_num"] = df["Size"].str.strip().str.lower().map(size_map)
 
     # Canonical trait extraction (previously used slightly *different* regexes
@@ -1305,11 +1387,23 @@ def _prepare_cr_dataset(official_csv: str) -> pd.DataFrame:
         df["Additional"], df["Speeds"]
     )
     df[
-        ["physical_res", "cc_immune", "magic_res",
-         "pack_tactics", "spellcasting", "regeneration"]
+        [
+            "physical_res",
+            "cc_immune",
+            "magic_res",
+            "pack_tactics",
+            "spellcasting",
+            "regeneration",
+        ]
     ] = extract_official_traits(df["WRI"], df["Additional"])[
-        ["physical_res", "cc_immune", "magic_res",
-         "pack_tactics", "spellcasting", "regeneration"]
+        [
+            "physical_res",
+            "cc_immune",
+            "magic_res",
+            "pack_tactics",
+            "spellcasting",
+            "regeneration",
+        ]
     ]
 
     return df.dropna(subset=["cr_num", "hp", "ac", "stat_sum", "size_num"])
@@ -1333,15 +1427,19 @@ def train_cr_predictor(
         X, y, test_size=test_size, random_state=42
     )
     cr_model = xgb.XGBRegressor(
-        n_estimators=300, max_depth=6, learning_rate=0.05,
-        random_state=42, n_jobs=-1,
+        n_estimators=300,
+        max_depth=6,
+        learning_rate=0.05,
+        random_state=42,
+        n_jobs=-1,
     )
     cr_model.fit(X_train, y_train)
 
     y_pred = cr_model.predict(X_test)
     LOGGER.info(
         "CR Predictor — MAE: %.2f | R²: %.4f",
-        mean_absolute_error(y_test, y_pred), r2_score(y_test, y_pred),
+        mean_absolute_error(y_test, y_pred),
+        r2_score(y_test, y_pred),
     )
     joblib.dump(cr_model, output_path)
     # Version-proof twin: XGBoost pickles are NOT portable across versions
@@ -1359,10 +1457,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--model-output", default="true_lethality_model.pkl")
     p.add_argument("--test-size", type=float, default=0.2)
     p.add_argument(
-        "--model", choices=["logistic", "xgb"], default="xgb",
+        "--model",
+        choices=["logistic", "xgb"],
+        default="xgb",
         help="Production learner. Logistic wins raw grouped-CV AUC but "
-             "fails interventional sanity (see build_model docstring); "
-             "xgb's monotone constraints make it the deployment choice.",
+        "fails interventional sanity (see build_model docstring); "
+        "xgb's monotone constraints make it the deployment choice.",
     )
     p.add_argument("--no-tune", action="store_true", help="Skip Optuna tuning.")
     p.add_argument("--trials", type=int, default=30, help="Optuna trial count.")

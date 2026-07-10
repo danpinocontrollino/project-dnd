@@ -55,11 +55,11 @@ except Exception:
 
 if _IS_DARK:
     SERIES = {
-        "Balanced": "#3987e5",       # blue   (slot 1, dark step)
+        "Balanced": "#3987e5",  # blue   (slot 1, dark step)
         "Glass Cannons": "#199e70",  # aqua   (slot 2)
-        "The Wall": "#c98500",       # yellow (slot 3)
-        "Melee Rush": "#008300",     # green  (slot 4)
-        "Full Caster": "#9085e9",    # violet (slot 5)
+        "The Wall": "#c98500",  # yellow (slot 3)
+        "Melee Rush": "#008300",  # green  (slot 4)
+        "Full Caster": "#9085e9",  # violet (slot 5)
     }
     INK = "#ffffff"
     INK_2 = "#c3c2b7"
@@ -124,27 +124,47 @@ def _base_layout(fig: go.Figure, title: str, xaxis_title: str, yaxis_title: str)
         title=dict(text=title, font=dict(size=15, color=INK)),
         plot_bgcolor=SURFACE,
         paper_bgcolor=SURFACE,
-        font=dict(family="system-ui, -apple-system, 'Segoe UI', sans-serif",
-                  color=INK_2, size=12),
-        xaxis=dict(title=xaxis_title, gridcolor=GRID, zeroline=False,
-                   tickfont=dict(color=MUTED)),
-        yaxis=dict(title=yaxis_title, gridcolor=GRID, zeroline=False,
-                   tickfont=dict(color=MUTED)),
+        font=dict(
+            family="system-ui, -apple-system, 'Segoe UI', sans-serif",
+            color=INK_2,
+            size=12,
+        ),
+        xaxis=dict(
+            title=xaxis_title,
+            gridcolor=GRID,
+            zeroline=False,
+            tickfont=dict(color=MUTED),
+        ),
+        yaxis=dict(
+            title=yaxis_title,
+            gridcolor=GRID,
+            zeroline=False,
+            tickfont=dict(color=MUTED),
+        ),
         legend=dict(orientation="h", yanchor="top", y=-0.18, x=0),
         margin=dict(l=55, r=15, t=50, b=10),
         hovermode="x unified",
     )
 
 
-def plot_win_curves(df_curve: pd.DataFrame, appraisal: dict,
-                    target: float) -> go.Figure:
+def plot_win_curves(
+    df_curve: pd.DataFrame, appraisal: dict, target: float
+) -> go.Figure:
     """Win probability vs party level, one 2px line per composition."""
     fig = go.Figure()
 
-    fig.add_hrect(y0=max(0, target - 0.10), y1=min(1, target + 0.10),
-                  fillcolor=BAND, opacity=0.6, line_width=0)
+    fig.add_hrect(
+        y0=max(0, target - 0.10),
+        y1=min(1, target + 0.10),
+        fillcolor=BAND,
+        opacity=0.6,
+        line_width=0,
+    )
     fig.add_hline(
-        y=target, line_dash="dash", line_color=MUTED, line_width=1,
+        y=target,
+        line_dash="dash",
+        line_color=MUTED,
+        line_width=1,
         annotation_text=f"target {target:.0%}",
         annotation_font_color=MUTED,
     )
@@ -153,8 +173,10 @@ def plot_win_curves(df_curve: pd.DataFrame, appraisal: dict,
         sub = df_curve[df_curve["comp_name"] == comp]
         fig.add_trace(
             go.Scatter(
-                x=sub["avg_party_level"], y=sub["win_prob"],
-                mode="lines", name=comp,
+                x=sub["avg_party_level"],
+                y=sub["win_prob"],
+                mode="lines",
+                name=comp,
                 line=dict(color=color, width=2),
                 hovertemplate="Level %{x} · %{y:.1%}<extra>" + comp + "</extra>",
             )
@@ -162,13 +184,19 @@ def plot_win_curves(df_curve: pd.DataFrame, appraisal: dict,
 
     if appraisal["verdict"] == "ok":
         fig.add_vline(
-            x=appraisal["level"], line_dash="dot", line_color=INK,
+            x=appraisal["level"],
+            line_dash="dot",
+            line_color=INK,
             line_width=1.5,
             annotation_text=f"True Lethality Level {appraisal['level']:g}",
             annotation_font_color=INK,
         )
-    _base_layout(fig, "Win probability vs. party level (party of 4)",
-                 "Average party level", "P(Party Win)")
+    _base_layout(
+        fig,
+        "Win probability vs. party level (party of 4)",
+        "Average party level",
+        "P(Party Win)",
+    )
     fig.update_yaxes(range=[0, 1], tickformat=".0%")
     fig.update_xaxes(dtick=2)
     return fig
@@ -177,39 +205,53 @@ def plot_win_curves(df_curve: pd.DataFrame, appraisal: dict,
 def plot_size_level_heatmap(df_sim: pd.DataFrame) -> go.Figure:
     """Sequential-blue heatmap: win prob by party size x level (Balanced)."""
     sub = df_sim[df_sim["comp_name"] == "Balanced"]
-    grid = sub.pivot_table(index="party_size", columns="avg_party_level",
-                           values="win_prob")
+    grid = sub.pivot_table(
+        index="party_size", columns="avg_party_level", values="win_prob"
+    )
     ramp = [
-        [0.0, "#cde2fb"], [0.25, "#9ec5f4"], [0.5, "#5598e7"],
-        [0.75, "#256abf"], [1.0, "#0d366b"],
+        [0.0, "#cde2fb"],
+        [0.25, "#9ec5f4"],
+        [0.5, "#5598e7"],
+        [0.75, "#256abf"],
+        [1.0, "#0d366b"],
     ]
     fig = go.Figure(
         go.Heatmap(
             z=grid.values,
             x=[str(c) for c in grid.columns],
             y=[f"{r} PCs" for r in grid.index],
-            colorscale=ramp, zmin=0, zmax=1,
+            colorscale=ramp,
+            zmin=0,
+            zmax=1,
             colorbar=dict(title="P(win)", tickformat=".0%"),
             hovertemplate="Level %{x} · %{y}<br>P(win) %{z:.1%}<extra></extra>",
-            xgap=2, ygap=2,
+            xgap=2,
+            ygap=2,
         )
     )
-    _base_layout(fig, "Balanced-party win probability by size and level",
-                 "Average party level", "")
+    _base_layout(
+        fig,
+        "Balanced-party win probability by size and level",
+        "Average party level",
+        "",
+    )
     fig.update_layout(hovermode="closest")
     return fig
 
 
-def render_results(pipeline, monster, num_monsters: int,
-                   baseline_cr: float, baseline_label: str,
-                   target: float = TARGET_WIN_RATE):
+def render_results(
+    pipeline,
+    monster,
+    num_monsters: int,
+    baseline_cr: float,
+    baseline_label: str,
+    target: float = TARGET_WIN_RATE,
+):
     """``monster`` is a MonsterProfile or a roster [(profile, count), ...]."""
     roster = normalize_roster(monster, num_monsters)
     fields = roster_monster_fields(roster)
     with st.spinner("Binary-searching the lethality frontier…"):
-        appraisal = lethality_appraisal(
-            pipeline, monster, num_monsters, target=target
-        )
+        appraisal = lethality_appraisal(pipeline, monster, num_monsters, target=target)
         df_curve = win_curve(pipeline, monster, num_monsters)
         df_sim = simulate_party_grid(pipeline, monster, num_monsters)
 
@@ -227,27 +269,33 @@ def render_results(pipeline, monster, num_monsters: int,
     c1, c2, c3 = st.columns(3)
     if multiple:
         c1.metric(
-            baseline_label, f"CR {book_cr:g}",
+            baseline_label,
+            f"CR {book_cr:g}",
             delta=f"{book['num_monsters']:.0f} monsters, DMG-adjusted",
             delta_color="off",
             help="Computed with the official DMG p.82 procedure — see the "
-                 "book-math line below.",
+            "book-math line below.",
         )
     else:
         c1.metric(baseline_label, f"CR {baseline_cr:g}")
     level_text = {"trivial": "≤ 1", "beyond_deadly": "> 20"}.get(
         verdict, f"{lethality_level:g}"
     )
-    c2.metric("⚡ True Lethality Level", level_text,
-              delta=f"{appraisal['p_at_level']:.1%} win at this level",
-              delta_color="off",
-              help=f"Party level at which a balanced party of 4 reaches a "
-                   f"{target:.0%} predicted win rate against this encounter. "
-                   f"The sub-metric shows the exact win probability at the "
-                   f"appraised level — encounters can share a level but "
-                   f"differ in risk.")
-    c3.metric("P(win) @ level 1 → 20",
-              f"{appraisal['p_level_1']:.0%} → {appraisal['p_level_20']:.0%}")
+    c2.metric(
+        "⚡ True Lethality Level",
+        level_text,
+        delta=f"{appraisal['p_at_level']:.1%} win at this level",
+        delta_color="off",
+        help=f"Party level at which a balanced party of 4 reaches a "
+        f"{target:.0%} predicted win rate against this encounter. "
+        f"The sub-metric shows the exact win probability at the "
+        f"appraised level — encounters can share a level but "
+        f"differ in risk.",
+    )
+    c3.metric(
+        "P(win) @ level 1 → 20",
+        f"{appraisal['p_level_1']:.0%} → {appraisal['p_level_20']:.0%}",
+    )
 
     if multiple:
         st.caption(
@@ -285,13 +333,17 @@ def render_results(pipeline, monster, num_monsters: int,
                 f"for this encounter."
             )
 
-    st.plotly_chart(plot_win_curves(df_curve, appraisal, target),
-                    use_container_width=True, theme=None)
+    st.plotly_chart(
+        plot_win_curves(df_curve, appraisal, target),
+        use_container_width=True,
+        theme=None,
+    )
 
     col_a, col_b = st.columns([3, 2])
     with col_a:
-        st.plotly_chart(plot_size_level_heatmap(df_sim),
-                        use_container_width=True, theme=None)
+        st.plotly_chart(
+            plot_size_level_heatmap(df_sim), use_container_width=True, theme=None
+        )
     with col_b:
         st.subheader("⚔️ Fairest matchups")
         best = fair_fight_matches(df_sim, target=target)
@@ -302,18 +354,17 @@ def render_results(pipeline, monster, num_monsters: int,
             adjusted_xp = fields["total_monster_xp"] * encounter_xp_multiplier(
                 fields["num_monsters_total"], r["party_size"]
             )
-            tier = _classify_xp_tier(
-                adjusted_xp, r["avg_party_level"], r["party_size"]
+            tier = _classify_xp_tier(adjusted_xp, r["avg_party_level"], r["party_size"])
+            table.append(
+                {
+                    "Party level": int(r["avg_party_level"]),
+                    "Size": int(r["party_size"]),
+                    "Composition": r["comp_name"],
+                    "Win %": f"{r['win_prob']:.1%}",
+                    "DMG tier": TIER_NAMES.get(tier, "?"),
+                }
             )
-            table.append({
-                "Party level": int(r["avg_party_level"]),
-                "Size": int(r["party_size"]),
-                "Composition": r["comp_name"],
-                "Win %": f"{r['win_prob']:.1%}",
-                "DMG tier": TIER_NAMES.get(tier, "?"),
-            })
-        st.dataframe(pd.DataFrame(table), use_container_width=True,
-                     hide_index=True)
+        st.dataframe(pd.DataFrame(table), use_container_width=True, hide_index=True)
 
         threat_flags = []
         if fields["monster_is_legendary"]:
@@ -325,7 +376,9 @@ def render_results(pipeline, monster, num_monsters: int,
         if fields["monster_has_physical_res"]:
             threat_flags.append("⚔️ Physical resistance — martial damage is halved")
         if fields["monster_has_pack_tactics"] and fields["num_monsters_total"] > 1:
-            threat_flags.append("🐺 Pack tactics × multiple monsters — advantage everywhere")
+            threat_flags.append(
+                "🐺 Pack tactics × multiple monsters — advantage everywhere"
+            )
         if fields["max_monster_burst"] >= 50:
             threat_flags.append(
                 f"💥 Nova threat — its scariest single action deals "
@@ -362,11 +415,15 @@ with st.sidebar:
         )
     st.divider()
     target_win = st.slider(
-        "🎯 Target win rate", 0.50, 0.90, TARGET_WIN_RATE, 0.05,
+        "🎯 Target win rate",
+        0.50,
+        0.90,
+        TARGET_WIN_RATE,
+        0.05,
         help="The predicted win probability that defines a 'fair fight'. "
-             "Note: real tables win 83% of resolved fights, so values near "
-             "0.85 mean 'typical curated encounter' and 0.55 means "
-             "'genuine coin flip'.",
+        "Note: real tables win 83% of resolved fights, so values near "
+        "0.85 mean 'typical curated encounter' and 0.55 means "
+        "'genuine coin flip'.",
     )
     st.caption("Statistical Machine Learning — Final Project")
 
@@ -384,7 +441,8 @@ with st.expander("📚 What do the party compositions mean?"):
                 for role, d in ROLE_DEFINITIONS.items()
             ]
         ),
-        use_container_width=True, hide_index=True,
+        use_container_width=True,
+        hide_index=True,
     )
     st.markdown("**The five simulated compositions** (which roles are present):")
     check = lambda v: "✅" if v else "—"
@@ -402,7 +460,8 @@ with st.expander("📚 What do the party compositions mean?"):
                 for c in PARTY_COMPOSITIONS
             ]
         ),
-        use_container_width=True, hide_index=True,
+        use_container_width=True,
+        hide_index=True,
     )
 
 tab1, tab2, tab3 = st.tabs(
@@ -416,7 +475,7 @@ with tab1:
         "Search the official bestiary",
         options=[""] + monster_names,
         help=f"{len(monster_names)} official monsters, offensive stats parsed "
-             "from SRD statblocks where available.",
+        "from SRD statblocks where available.",
     )
 
     if selected:
@@ -424,8 +483,9 @@ with tab1:
         monster = profile_from_db_row(row)
 
         source = str(row.get("offense_source", "dmg_cr_table"))
-        badge = ("🎯 real statblock" if source == "srd_statblock"
-                 else "📐 DMG design table")
+        badge = (
+            "🎯 real statblock" if source == "srd_statblock" else "📐 DMG design table"
+        )
         st.success(
             f"**{monster.name}** — CR {monster.cr:g} · {int(monster.hp)} HP · "
             f"AC {int(monster.ac)} · DPR {monster.dpr:.0f} · "
@@ -434,14 +494,21 @@ with tab1:
         )
 
         n_official = st.number_input(
-            "Number of monsters (action economy)", 1, 30, 1,
+            "Number of monsters (action economy)",
+            1,
+            30,
+            1,
             key="n_official",
         )
-        if st.button("Calculate True Lethality", type="primary",
-                     key="btn_official"):
-            render_results(pipeline, monster, int(n_official),
-                           monster.cr, "📖 Official Monster Manual",
-                           target=target_win)
+        if st.button("Calculate True Lethality", type="primary", key="btn_official"):
+            render_results(
+                pipeline,
+                monster,
+                int(n_official),
+                monster.cr,
+                "📖 Official Monster Manual",
+                target=target_win,
+            )
 
 # ── Tab 2: homebrew appraiser ──────────────────────────────────────────────
 with tab2:
@@ -452,11 +519,16 @@ with tab2:
         hp = st.number_input("Hit points", 1, 2000, 100)
         ac = st.number_input("Armor class", 1, 30, 15)
         stat_sum = st.number_input(
-            "Ability score sum", 10, 300, 150, step=5,
+            "Ability score sum",
+            10,
+            300,
+            150,
+            step=5,
             help="Goblin ≈ 60 · Adult dragon ≈ 130 · God ≈ 180",
         )
         size_name = st.selectbox(
-            "Size", ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"],
+            "Size",
+            ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"],
             index=2,
         )
     with col2:
@@ -464,21 +536,41 @@ with tab2:
         # value=None instead of a 0-sentinel: an attack bonus of 0 is a legal
         # statblock value (CR 0 critters) and must be enterable.
         dpr_in = st.number_input(
-            "Damage per round", 1, 400, value=None, placeholder="auto",
+            "Damage per round",
+            1,
+            400,
+            value=None,
+            placeholder="auto",
         )
         atk_in = st.number_input(
-            "Attack bonus", 0, 20, value=None, placeholder="auto",
+            "Attack bonus",
+            0,
+            20,
+            value=None,
+            placeholder="auto",
         )
         dc_in = st.number_input(
-            "Spell/ability save DC", 1, 30, value=None, placeholder="auto",
+            "Spell/ability save DC",
+            1,
+            30,
+            value=None,
+            placeholder="auto",
         )
         burst_in = st.number_input(
-            "Burst damage", 1, 400, value=None, placeholder="auto",
+            "Burst damage",
+            1,
+            400,
+            value=None,
+            placeholder="auto",
             help="The scariest single action: breath weapon, top damage "
-                 "spell. Empty = assume equal to DPR.",
+            "spell. Empty = assume equal to DPR.",
         )
         num_homebrew = st.number_input(
-            "Number of monsters (action economy)", 1, 30, 1, key="n_homebrew",
+            "Number of monsters (action economy)",
+            1,
+            30,
+            1,
+            key="n_homebrew",
         )
     with col3:
         is_leg = st.checkbox("Legendary (actions/resistances)")
@@ -491,34 +583,57 @@ with tab2:
         pack = st.checkbox("Pack tactics")
 
     if st.button("Appraise & Find Matches", type="primary", key="btn_custom"):
-        size_map = {"Tiny": 1, "Small": 2, "Medium": 3, "Large": 4,
-                    "Huge": 5, "Gargantuan": 6}
+        size_map = {
+            "Tiny": 1,
+            "Small": 2,
+            "Medium": 3,
+            "Large": 4,
+            "Huge": 5,
+            "Gargantuan": 6,
+        }
 
         # First appraisal: what would WotC math rate this?
         if cr_predictor is not None:
-            baseline_cr = predict_wotc_cr(cr_predictor, {
-                "hp": min(hp, 2000), "ac": max(10, min(ac, 30)),
-                "stat_sum": max(60, min(stat_sum, 250)),
-                "size_num": size_map[size_name],
-                "is_legendary": int(is_leg), "has_mobility": int(has_mob),
-                "physical_res": int(phys_res), "cc_immune": int(cc_imm),
-                "magic_res": int(mag_res), "pack_tactics": int(pack),
-                "spellcasting": int(spell), "regeneration": int(regen),
-            })
+            baseline_cr = predict_wotc_cr(
+                cr_predictor,
+                {
+                    "hp": min(hp, 2000),
+                    "ac": max(10, min(ac, 30)),
+                    "stat_sum": max(60, min(stat_sum, 250)),
+                    "size_num": size_map[size_name],
+                    "is_legendary": int(is_leg),
+                    "has_mobility": int(has_mob),
+                    "physical_res": int(phys_res),
+                    "cc_immune": int(cc_imm),
+                    "magic_res": int(mag_res),
+                    "pack_tactics": int(pack),
+                    "spellcasting": int(spell),
+                    "regeneration": int(regen),
+                },
+            )
             baseline_label = "🤖 Predicted WotC rating"
         else:
             baseline_cr = max(0.25, round((hp / 15) * 4) / 4)
             baseline_label = "HP heuristic baseline"
 
         monster = MonsterProfile(
-            cr=baseline_cr, hp=hp, ac=ac,
-            size_num=size_map[size_name], stat_sum=stat_sum,
-            is_legendary=int(is_leg), has_mobility=int(has_mob),
-            physical_res=int(phys_res), cc_immune=int(cc_imm),
-            magic_res=int(mag_res), pack_tactics=int(pack),
-            spellcasting=int(spell), regeneration=int(regen),
-            atk_bonus=atk_in, dpr=dpr_in,
-            save_dc=dc_in, burst=burst_in,
+            cr=baseline_cr,
+            hp=hp,
+            ac=ac,
+            size_num=size_map[size_name],
+            stat_sum=stat_sum,
+            is_legendary=int(is_leg),
+            has_mobility=int(has_mob),
+            physical_res=int(phys_res),
+            cc_immune=int(cc_imm),
+            magic_res=int(mag_res),
+            pack_tactics=int(pack),
+            spellcasting=int(spell),
+            regeneration=int(regen),
+            atk_bonus=atk_in,
+            dpr=dpr_in,
+            save_dc=dc_in,
+            burst=burst_in,
         )
         if dpr_in is None:
             est = offense_from_cr(baseline_cr)
@@ -527,8 +642,14 @@ with tab2:
                 f"DPR {est[1]:.0f} · +{est[0]:.0f} to hit · DC {est[2]:.0f}. "
                 "Enter real values above for a sharper appraisal."
             )
-        render_results(pipeline, monster, int(num_homebrew),
-                       baseline_cr, baseline_label, target=target_win)
+        render_results(
+            pipeline,
+            monster,
+            int(num_homebrew),
+            baseline_cr,
+            baseline_label,
+            target=target_win,
+        )
 
 # ── Tab 3: mixed-monster encounter builder ─────────────────────────────────
 with tab3:
@@ -546,7 +667,8 @@ with tab3:
     with col_off:
         st.subheader("📖 Add official monster")
         sel_roster = st.selectbox(
-            "Monster", options=[""] + (db["Name"].dropna().tolist() if not db.empty else []),
+            "Monster",
+            options=[""] + (db["Name"].dropna().tolist() if not db.empty else []),
             key="roster_official_sel",
         )
         cnt_official = st.number_input("Count", 1, 30, 1, key="roster_official_cnt")
@@ -569,48 +691,71 @@ with tab3:
                 hb_ac = st.number_input("AC", 1, 30, 14)
                 hb_stat = st.number_input("Ability sum", 10, 300, 120, step=5)
                 hb_size = st.selectbox(
-                    "Size", ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"],
+                    "Size",
+                    ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"],
                     index=2,
                 )
             with f2:
-                hb_dpr = st.number_input(
-                    "DPR", 1, 400, value=None, placeholder="auto")
+                hb_dpr = st.number_input("DPR", 1, 400, value=None, placeholder="auto")
                 hb_atk = st.number_input(
-                    "Atk bonus", 0, 20, value=None, placeholder="auto")
+                    "Atk bonus", 0, 20, value=None, placeholder="auto"
+                )
                 hb_dc = st.number_input(
-                    "Save DC", 1, 30, value=None, placeholder="auto")
+                    "Save DC", 1, 30, value=None, placeholder="auto"
+                )
                 hb_burst = st.number_input(
-                    "Burst dmg", 1, 400, value=None, placeholder="auto")
+                    "Burst dmg", 1, 400, value=None, placeholder="auto"
+                )
             hb_traits = st.multiselect(
                 "Traits",
-                ["Legendary", "High mobility", "Regeneration",
-                 "Physical resistance", "Magic resistance", "CC immune",
-                 "Spellcaster", "Pack tactics"],
+                [
+                    "Legendary",
+                    "High mobility",
+                    "Regeneration",
+                    "Physical resistance",
+                    "Magic resistance",
+                    "CC immune",
+                    "Spellcaster",
+                    "Pack tactics",
+                ],
             )
             hb_count = st.number_input("Count", 1, 30, 1)
             if st.form_submit_button("➕ Add to encounter"):
-                size_map = {"Tiny": 1, "Small": 2, "Medium": 3, "Large": 4,
-                            "Huge": 5, "Gargantuan": 6}
+                size_map = {
+                    "Tiny": 1,
+                    "Small": 2,
+                    "Medium": 3,
+                    "Large": 4,
+                    "Huge": 5,
+                    "Gargantuan": 6,
+                }
                 t = set(hb_traits)
                 if cr_predictor is not None:
-                    hb_cr = predict_wotc_cr(cr_predictor, {
-                        "hp": min(hb_hp, 2000), "ac": max(10, min(hb_ac, 30)),
-                        "stat_sum": max(60, min(hb_stat, 250)),
-                        "size_num": size_map[hb_size],
-                        "is_legendary": int("Legendary" in t),
-                        "has_mobility": int("High mobility" in t),
-                        "physical_res": int("Physical resistance" in t),
-                        "cc_immune": int("CC immune" in t),
-                        "magic_res": int("Magic resistance" in t),
-                        "pack_tactics": int("Pack tactics" in t),
-                        "spellcasting": int("Spellcaster" in t),
-                        "regeneration": int("Regeneration" in t),
-                    })
+                    hb_cr = predict_wotc_cr(
+                        cr_predictor,
+                        {
+                            "hp": min(hb_hp, 2000),
+                            "ac": max(10, min(hb_ac, 30)),
+                            "stat_sum": max(60, min(hb_stat, 250)),
+                            "size_num": size_map[hb_size],
+                            "is_legendary": int("Legendary" in t),
+                            "has_mobility": int("High mobility" in t),
+                            "physical_res": int("Physical resistance" in t),
+                            "cc_immune": int("CC immune" in t),
+                            "magic_res": int("Magic resistance" in t),
+                            "pack_tactics": int("Pack tactics" in t),
+                            "spellcasting": int("Spellcaster" in t),
+                            "regeneration": int("Regeneration" in t),
+                        },
+                    )
                 else:
                     hb_cr = max(0.25, round((hb_hp / 15) * 4) / 4)
                 prof = MonsterProfile(
-                    cr=hb_cr, hp=hb_hp, ac=hb_ac,
-                    size_num=size_map[hb_size], stat_sum=hb_stat,
+                    cr=hb_cr,
+                    hp=hb_hp,
+                    ac=hb_ac,
+                    size_num=size_map[hb_size],
+                    stat_sum=hb_stat,
                     is_legendary=int("Legendary" in t),
                     has_mobility=int("High mobility" in t),
                     physical_res=int("Physical resistance" in t),
@@ -619,8 +764,10 @@ with tab3:
                     pack_tactics=int("Pack tactics" in t),
                     spellcasting=int("Spellcaster" in t),
                     regeneration=int("Regeneration" in t),
-                    dpr=hb_dpr, atk_bonus=hb_atk,
-                    save_dc=hb_dc, burst=hb_burst,
+                    dpr=hb_dpr,
+                    atk_bonus=hb_atk,
+                    save_dc=hb_dc,
+                    burst=hb_burst,
                     name=hb_name or "Custom Horror",
                 )
                 st.session_state.roster.append(
@@ -643,9 +790,7 @@ with tab3:
                 st.session_state.roster.pop(i)
                 st.rerun()
 
-        roster_pairs = [
-            (e["profile"], e["count"]) for e in st.session_state.roster
-        ]
+        roster_pairs = [(e["profile"], e["count"]) for e in st.session_state.roster]
         fields_preview = roster_monster_fields(roster_pairs)
         st.caption(
             f"Totals: {fields_preview['num_monsters_total']:.0f} monsters · "
@@ -659,8 +804,11 @@ with tab3:
         if bc1.button("Calculate True Lethality", type="primary", key="btn_roster"):
             weighted_cr = fields_preview["avg_monster_cr"]
             render_results(
-                pipeline, roster_pairs, 1,
-                round(weighted_cr * 4) / 4, "📊 Roster avg CR (weighted)",
+                pipeline,
+                roster_pairs,
+                1,
+                round(weighted_cr * 4) / 4,
+                "📊 Roster avg CR (weighted)",
                 target=target_win,
             )
         if bc2.button("Clear encounter", key="btn_roster_clear"):

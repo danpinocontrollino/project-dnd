@@ -78,6 +78,7 @@ LOGGER = logging.getLogger(__name__)
 
 # ── Candidate models (all consume the engineered feature matrix) ──────────
 
+
 def _candidates(random_state: int = 42) -> dict:
     """Model zoo.  Each pipeline starts from the engineered features."""
     prep = lambda: [
@@ -88,20 +89,39 @@ def _candidates(random_state: int = 42) -> dict:
     return {
         # Lec 04 (logistic loss) + Lec 05 (ridge penalty): penalized ERM.
         "Ridge Logistic (Lec 04+05)": Pipeline(
-            prep() + [("clf", LogisticRegression(
-                penalty="l2", C=1.0, max_iter=2000, random_state=random_state,
-            ))]
+            prep()
+            + [
+                (
+                    "clf",
+                    LogisticRegression(
+                        penalty="l2",
+                        C=1.0,
+                        max_iter=2000,
+                        random_state=random_state,
+                    ),
+                )
+            ]
         ),
         # Lec 06 pt 1-2: RBF Mercer kernel via Rahimi-Recht random Fourier
         # features -> linear logistic model in the random feature space.
         "RFF Kernel Logistic (Lec 06)": Pipeline(
-            prep() + [
-                ("rff", RBFSampler(gamma="scale", n_components=500,
-                                   random_state=random_state)),
-                ("clf", LogisticRegression(
-                    penalty="l2", C=1.0, max_iter=2000,
-                    random_state=random_state,
-                )),
+            prep()
+            + [
+                (
+                    "rff",
+                    RBFSampler(
+                        gamma="scale", n_components=500, random_state=random_state
+                    ),
+                ),
+                (
+                    "clf",
+                    LogisticRegression(
+                        penalty="l2",
+                        C=1.0,
+                        max_iter=2000,
+                        random_state=random_state,
+                    ),
+                ),
             ]
         ),
         # Production learner (uncalibrated for a fair risk comparison).
@@ -142,15 +162,24 @@ def benchmark_classifiers(
             aucs.append(roc_auc_score(y.iloc[te], p))
             briers.append(brier_score_loss(y.iloc[te], p))
             lls.append(log_loss(y.iloc[te], p))
-        records.append({
-            "model": name,
-            "cv_auc_mean": np.mean(aucs), "cv_auc_std": np.std(aucs),
-            "cv_brier_mean": np.mean(briers), "cv_brier_std": np.std(briers),
-            "cv_logloss_mean": np.mean(lls), "cv_logloss_std": np.std(lls),
-        })
+        records.append(
+            {
+                "model": name,
+                "cv_auc_mean": np.mean(aucs),
+                "cv_auc_std": np.std(aucs),
+                "cv_brier_mean": np.mean(briers),
+                "cv_brier_std": np.std(briers),
+                "cv_logloss_mean": np.mean(lls),
+                "cv_logloss_std": np.std(lls),
+            }
+        )
         LOGGER.info(
             "%-30s AUC %.4f±%.4f | Brier %.4f | logloss %.4f",
-            name, np.mean(aucs), np.std(aucs), np.mean(briers), np.mean(lls),
+            name,
+            np.mean(aucs),
+            np.std(aucs),
+            np.mean(briers),
+            np.mean(lls),
         )
     return pd.DataFrame(records)
 
@@ -163,12 +192,24 @@ def plot_benchmark(df: pd.DataFrame, out_path: str) -> None:
     fig, ax = plt.subplots(figsize=(8, 4.5), dpi=300)
     order = df.sort_values("cv_auc_mean")
     y_pos = np.arange(len(order))
-    ax.barh(y_pos, order["cv_auc_mean"], xerr=order["cv_auc_std"],
-            color="#2a78d6", edgecolor="black", linewidth=0.4, capsize=4,
-            height=0.55)
+    ax.barh(
+        y_pos,
+        order["cv_auc_mean"],
+        xerr=order["cv_auc_std"],
+        color="#2a78d6",
+        edgecolor="black",
+        linewidth=0.4,
+        capsize=4,
+        height=0.55,
+    )
     for i, (_, r) in enumerate(order.iterrows()):
-        ax.text(r["cv_auc_mean"] + r["cv_auc_std"] + 0.004, i,
-                f"{r['cv_auc_mean']:.3f}", va="center", fontsize=9)
+        ax.text(
+            r["cv_auc_mean"] + r["cv_auc_std"] + 0.004,
+            i,
+            f"{r['cv_auc_mean']:.3f}",
+            va="center",
+            fontsize=9,
+        )
     ax.set_yticks(y_pos)
     ax.set_yticklabels(order["model"])
     ax.axvline(0.5, color="#898781", linestyle="--", linewidth=1)
@@ -184,11 +225,10 @@ def plot_benchmark(df: pd.DataFrame, out_path: str) -> None:
 
 # ── Kernel two-sample test: campaign shift (Lec 06 pt 3) ──────────────────
 
+
 def _rbf_kernel_matrix(A: np.ndarray, B: np.ndarray, bandwidth: float) -> np.ndarray:
-    sq = (
-        (A ** 2).sum(1)[:, None] + (B ** 2).sum(1)[None, :] - 2.0 * A @ B.T
-    )
-    return np.exp(-sq / (2.0 * bandwidth ** 2))
+    sq = (A**2).sum(1)[:, None] + (B**2).sum(1)[None, :] - 2.0 * A @ B.T
+    return np.exp(-sq / (2.0 * bandwidth**2))
 
 
 def mmd2_unbiased(X: np.ndarray, Y: np.ndarray, bandwidth: float) -> float:
@@ -199,11 +239,7 @@ def mmd2_unbiased(X: np.ndarray, Y: np.ndarray, bandwidth: float) -> float:
     n, m = len(X), len(Y)
     np.fill_diagonal(Kxx, 0.0)
     np.fill_diagonal(Kyy, 0.0)
-    return (
-        Kxx.sum() / (n * (n - 1))
-        + Kyy.sum() / (m * (m - 1))
-        - 2.0 * Kxy.mean()
-    )
+    return Kxx.sum() / (n * (n - 1)) + Kyy.sum() / (m * (m - 1)) - 2.0 * Kxy.mean()
 
 
 def campaign_shift_mmd(
@@ -222,8 +258,9 @@ def campaign_shift_mmd(
     raw = pd.read_csv(input_csv)
     X, y, groups = prepare_xy(raw)
     tr, te = next(
-        GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-        .split(X, y, groups)
+        GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42).split(
+            X, y, groups
+        )
     )
 
     eng = DnDFeatureEngineer(1.5, FEATURE_COLUMNS)
@@ -249,7 +286,7 @@ def campaign_shift_mmd(
     for i in range(n_permutations):
         perm = rng.permutation(len(pooled))
         null[i] = mmd2_unbiased(
-            pooled[perm[: len(A)]], pooled[perm[len(A):]], bandwidth
+            pooled[perm[: len(A)]], pooled[perm[len(A) :]], bandwidth
         )
     p_value = float((null >= observed).mean())
 
@@ -263,13 +300,16 @@ def campaign_shift_mmd(
     }
     LOGGER.info(
         "Campaign-shift MMD^2 = %.5f (null 95%% = %.5f) -> p = %.3f  [%s]",
-        observed, result["mmd2_null_95pct"], p_value,
+        observed,
+        result["mmd2_null_95pct"],
+        p_value,
         "H0 REJECTED: campaigns shift" if p_value < 0.05 else "no detectable shift",
     )
     return result
 
 
 # ── Gaussian Process CR predictor (Lec 06 pt 4) ───────────────────────────
+
 
 def gp_cr_predictor(
     official_csv: str = "Monster Spreadsheet (D&D5e) - Official Stats.csv",
@@ -287,8 +327,9 @@ def gp_cr_predictor(
     Xtr, Xte = scaler.transform(X_train), scaler.transform(X_test)
 
     # RBF kernel + noise; hyperparameters by marginal-likelihood maximization.
-    kernel = ConstantKernel(1.0) * RBF(length_scale=np.ones(Xtr.shape[1])) \
-        + WhiteKernel(noise_level=1.0)
+    kernel = ConstantKernel(1.0) * RBF(
+        length_scale=np.ones(Xtr.shape[1])
+    ) + WhiteKernel(noise_level=1.0)
     gp = GaussianProcessRegressor(
         kernel=kernel, normalize_y=True, random_state=42, n_restarts_optimizer=2
     )
@@ -298,8 +339,11 @@ def gp_cr_predictor(
     import xgboost as xgb
 
     xgbr = xgb.XGBRegressor(
-        n_estimators=300, max_depth=6, learning_rate=0.05,
-        random_state=42, n_jobs=-1,
+        n_estimators=300,
+        max_depth=6,
+        learning_rate=0.05,
+        random_state=42,
+        n_jobs=-1,
     )
     xgbr.fit(X_train, y_train)
     y_xgb = xgbr.predict(X_test)
@@ -321,8 +365,11 @@ def gp_cr_predictor(
     }
     LOGGER.info(
         "CR predictor — GP: MAE %.3f R2 %.3f (95%% coverage %.2f) | XGB: MAE %.3f R2 %.3f",
-        result["gp_mae"], result["gp_r2"], coverage,
-        result["xgb_mae"], result["xgb_r2"],
+        result["gp_mae"],
+        result["gp_r2"],
+        coverage,
+        result["xgb_mae"],
+        result["xgb_r2"],
     )
     return result
 
@@ -349,8 +396,9 @@ def main() -> int:
     if not args.skip_gp:
         out["gp_cr_predictor"] = gp_cr_predictor()
 
-    with open(os.path.join(args.figures_dir, "course_benchmark.json"), "w",
-              encoding="utf-8") as fh:
+    with open(
+        os.path.join(args.figures_dir, "course_benchmark.json"), "w", encoding="utf-8"
+    ) as fh:
         json.dump(out, fh, indent=2)
     LOGGER.info("Wrote %s/course_benchmark.json", args.figures_dir)
     return 0

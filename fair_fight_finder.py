@@ -52,7 +52,9 @@ def load_pipeline():
     try:
         pipeline = joblib.load("true_lethality_model.pkl")
     except FileNotFoundError:
-        sys.exit("Error: true_lethality_model.pkl not found — run initial_learn.py first.")
+        sys.exit(
+            "Error: true_lethality_model.pkl not found — run initial_learn.py first."
+        )
     if "feature_engineer" not in getattr(pipeline, "named_steps", {}):
         sys.exit("Legacy model detected (no bundled feature engineering) — retrain.")
     cr_predictor = load_cr_predictor()
@@ -65,7 +67,14 @@ def prompt_homebrew(cr_predictor) -> MonsterProfile:
     print("\n--- CUSTOM / HOMEBREW APPRAISAL ---")
     hp = float(input("Monster HP (e.g. 150): "))
     ac = float(input("Monster AC (e.g. 17): "))
-    size_map = {"tiny": 1, "small": 2, "medium": 3, "large": 4, "huge": 5, "gargantuan": 6}
+    size_map = {
+        "tiny": 1,
+        "small": 2,
+        "medium": 3,
+        "large": 4,
+        "huge": 5,
+        "gargantuan": 6,
+    }
     size_num = size_map.get(input("Size (Tiny..Gargantuan): ").strip().lower(), 3)
 
     is_leg = _ask_flag("Legendary? (1/0): ")
@@ -86,21 +95,39 @@ def prompt_homebrew(cr_predictor) -> MonsterProfile:
 
     baseline_cr = max(0.25, round((hp / 15) * 4) / 4)
     if cr_predictor is not None:
-        baseline_cr = predict_wotc_cr(cr_predictor, {
-            "hp": min(hp, 2000), "ac": max(10, min(ac, 30)),
-            "stat_sum": max(60, min(stat_sum, 250)), "size_num": size_num,
-            "is_legendary": is_leg, "has_mobility": has_mob,
-            "physical_res": phys_res, "cc_immune": cc_imm,
-            "magic_res": mag_res, "pack_tactics": pack,
-            "spellcasting": spell, "regeneration": regen,
-        })
+        baseline_cr = predict_wotc_cr(
+            cr_predictor,
+            {
+                "hp": min(hp, 2000),
+                "ac": max(10, min(ac, 30)),
+                "stat_sum": max(60, min(stat_sum, 250)),
+                "size_num": size_num,
+                "is_legendary": is_leg,
+                "has_mobility": has_mob,
+                "physical_res": phys_res,
+                "cc_immune": cc_imm,
+                "magic_res": mag_res,
+                "pack_tactics": pack,
+                "spellcasting": spell,
+                "regeneration": regen,
+            },
+        )
         print(f"\n⚖️  XGBoost predicts WotC would rate this: CR {baseline_cr:g}")
 
     return MonsterProfile(
-        cr=baseline_cr, hp=hp, ac=ac, size_num=size_num, stat_sum=stat_sum,
-        is_legendary=is_leg, has_mobility=has_mob, physical_res=phys_res,
-        cc_immune=cc_imm, magic_res=mag_res, pack_tactics=pack,
-        spellcasting=spell, regeneration=regen,
+        cr=baseline_cr,
+        hp=hp,
+        ac=ac,
+        size_num=size_num,
+        stat_sum=stat_sum,
+        is_legendary=is_leg,
+        has_mobility=has_mob,
+        physical_res=phys_res,
+        cc_immune=cc_imm,
+        magic_res=mag_res,
+        pack_tactics=pack,
+        spellcasting=spell,
+        regeneration=regen,
         dpr=float(dpr_raw) if dpr_raw else None,
         atk_bonus=float(atk_raw) if atk_raw else None,
         save_dc=float(dc_raw) if dc_raw else None,
@@ -113,9 +140,13 @@ def print_composition_legend() -> None:
         print(f"  {role:<12} = {d['classes']}")
     for comp in PARTY_COMPOSITIONS:
         roles = [
-            label for label, key in
-            [("healer", "healer"), ("tank", "tank"),
-             ("arcane", "arcane"), ("martial DPS", "dps")]
+            label
+            for label, key in [
+                ("healer", "healer"),
+                ("tank", "tank"),
+                ("arcane", "arcane"),
+                ("martial DPS", "dps"),
+            ]
             if comp[key]
         ]
         print(f"  {comp['name']:<14} [{', '.join(roles) or 'none'}]")
@@ -128,10 +159,14 @@ def acquire_monster(query: str, db: pd.DataFrame, cr_predictor):
         monster = prompt_homebrew(cr_predictor)
         est = offense_from_cr(monster.cr)
         if monster.dpr == est[1]:
-            print(f"   Offense auto-estimated: DPR {est[1]:.0f} · +{est[0]:.0f} · DC {est[2]:.0f}")
+            print(
+                f"   Offense auto-estimated: DPR {est[1]:.0f} · +{est[0]:.0f} · DC {est[2]:.0f}"
+            )
         return monster
     if not db.empty:
-        matches = difflib.get_close_matches(query, db["clean_name"].dropna(), n=1, cutoff=0.6)
+        matches = difflib.get_close_matches(
+            query, db["clean_name"].dropna(), n=1, cutoff=0.6
+        )
         if matches:
             monster = profile_from_db_row(db[db["clean_name"] == matches[0]].iloc[0])
             print(
@@ -162,13 +197,21 @@ def main() -> None:
     roster = []
     while True:
         if roster:
-            query = input(
-                "\nAdd another monster? (name / 'c' for custom / Enter to finish): "
-            ).strip().lower()
+            query = (
+                input(
+                    "\nAdd another monster? (name / 'c' for custom / Enter to finish): "
+                )
+                .strip()
+                .lower()
+            )
             if not query:
                 break
         else:
-            query = input("Monster name ('c' or Enter for custom/homebrew): ").strip().lower()
+            query = (
+                input("Monster name ('c' or Enter for custom/homebrew): ")
+                .strip()
+                .lower()
+            )
         monster = acquire_monster(query, db, cr_predictor)
         if monster is None:
             continue
@@ -182,8 +225,8 @@ def main() -> None:
         f"\nEncounter: "
         + ", ".join(f"{c}x {m.name}" for m, c in roster)
         + f"\nTotals: {n_total:.0f} monsters · {fields['total_monster_hp']:.0f} pooled HP · "
-          f"{fields['total_monster_dpr']:.0f} pooled DPR · apex CR {fields['max_monster_cr']:g} · "
-          f"nova {fields['max_monster_burst']:.0f} dmg"
+        f"{fields['total_monster_dpr']:.0f} pooled DPR · apex CR {fields['max_monster_cr']:g} · "
+        f"nova {fields['max_monster_burst']:.0f} dmg"
     )
 
     print("\nBinary-searching the lethality frontier...")
@@ -201,19 +244,27 @@ def main() -> None:
     else:
         print(f"\n📖 Official rating: CR {book['effective_cr']:g}")
     if appraisal["verdict"] == "trivial":
-        print(f"⚡ TRUE LETHALITY LEVEL: ≤ 1 — even a level-1 party wins "
-              f"{appraisal['p_level_1']:.0%} of the time.")
+        print(
+            f"⚡ TRUE LETHALITY LEVEL: ≤ 1 — even a level-1 party wins "
+            f"{appraisal['p_level_1']:.0%} of the time."
+        )
     elif appraisal["verdict"] == "beyond_deadly":
-        print(f"⚡ TRUE LETHALITY LEVEL: > 20 — a level-20 party only wins "
-              f"{appraisal['p_level_20']:.0%} of the time. TPK machine.")
+        print(
+            f"⚡ TRUE LETHALITY LEVEL: > 20 — a level-20 party only wins "
+            f"{appraisal['p_level_20']:.0%} of the time. TPK machine."
+        )
     else:
         lethality_level = appraisal["level"]
-        print(f"⚡ TRUE LETHALITY LEVEL: {lethality_level:g} "
-              f"({appraisal['p_at_level']:.1%} win at this level)")
-        diff = lethality_level - book['effective_cr']
+        print(
+            f"⚡ TRUE LETHALITY LEVEL: {lethality_level:g} "
+            f"({appraisal['p_at_level']:.1%} win at this level)"
+        )
+        diff = lethality_level - book["effective_cr"]
         if abs(diff) >= 2:
-            print(f"   (Massive discrepancy: {abs(diff):.1f} levels "
-                  f"{'harder' if diff > 0 else 'easier'} than the rating suggests)")
+            print(
+                f"   (Massive discrepancy: {abs(diff):.1f} levels "
+                f"{'harder' if diff > 0 else 'easier'} than the rating suggests)"
+            )
         elif abs(diff) >= 1:
             print(f"   (Off by {abs(diff):.1f} levels)")
 
@@ -234,21 +285,29 @@ def main() -> None:
             n_total, r["party_size"]
         )
         tier = _classify_xp_tier(adjusted_xp, r["avg_party_level"], r["party_size"])
-        print(f"Level {int(r['avg_party_level'])} party "
-              f"({int(r['party_size'])} players) — {r['comp_name']}")
-        print(f"  Predicted win chance: {r['win_prob']:.1%}"
-              f" | DMG tier: {TIER_NAMES.get(tier, '?')}")
+        print(
+            f"Level {int(r['avg_party_level'])} party "
+            f"({int(r['party_size'])} players) — {r['comp_name']}"
+        )
+        print(
+            f"  Predicted win chance: {r['win_prob']:.1%}"
+            f" | DMG tier: {TIER_NAMES.get(tier, '?')}"
+        )
         if fields["monster_is_legendary"] and not r["has_healer"]:
             print("  ⚠️ LEGENDARY ATTRITION: no healer vs a legendary!")
-        if fields["monster_has_mobility"] and not (r["has_arcane"] or r["has_martial_dps"]):
+        if fields["monster_has_mobility"] and not (
+            r["has_arcane"] or r["has_martial_dps"]
+        ):
             print("  ⚠️ MOBILITY THREAT: no ranged answer to a flyer/swimmer!")
         if fields["monster_has_magic_res"] and r["has_arcane"]:
             print("  ⚠️ MAGIC RESISTANCE: spells will struggle to land!")
         if fields["monster_has_physical_res"] and r["has_martial_dps"]:
             print("  ⚠️ PHYSICAL RESISTANCE: martial weapon damage is halved!")
         if fields["max_monster_burst"] >= 50:
-            print(f"  💥 NOVA THREAT: scariest single action deals "
-                  f"~{fields['max_monster_burst']:.0f} damage!")
+            print(
+                f"  💥 NOVA THREAT: scariest single action deals "
+                f"~{fields['max_monster_burst']:.0f} damage!"
+            )
         print("-" * 56)
 
 

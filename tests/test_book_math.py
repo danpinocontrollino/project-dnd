@@ -47,7 +47,7 @@ class TestOfficialEstimate:
         # x2 multiplier -> 1,000 adjusted XP.
         est = official_encounter_estimate(_mon(0.25), 4)  # 4 x 50 = 200...
         # use explicit roster to hit exactly 500 XP: 4 monsters of CR 1/2
-        est = official_encounter_estimate(_mon(0.5), 4)   # 4 x 100 = 400
+        est = official_encounter_estimate(_mon(0.5), 4)  # 4 x 100 = 400
         assert est["multiplier"] == 2.0
         assert est["adjusted_xp"] == pytest.approx(est["total_xp"] * 2)
 

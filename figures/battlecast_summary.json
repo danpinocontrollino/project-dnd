@@ -1,0 +1,15 @@
+{
+  "n_cells": 304,
+  "trials_per_cell": 2000,
+  "guard_fit": {
+    "slope": 1.6302078411769598,
+    "intercept": -3.9771375260011195,
+    "hand_tuned_slope": 2.197,
+    "hand_tuned_intercept": -4.394
+  },
+  "mercy_gap": {
+    "mean_gap_model_minus_sim": -0.12726343172712007,
+    "corr_model_sim": 0.8454903843192183
+  },
+  "ood_rank_correlation": 0.5384810394923257
+}

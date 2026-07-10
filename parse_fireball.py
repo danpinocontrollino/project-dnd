@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import argparse
@@ -184,7 +183,9 @@ def make_encounter_id(data: Mapping[str, Any], file_path: str, line_idx: int) ->
     return f"{os.path.basename(file_path)}_{before_idx}"
 
 
-def match_monster_name(actor: Mapping[str, Any], monster_lookup: Mapping[str, Any]) -> Optional[str]:
+def match_monster_name(
+    actor: Mapping[str, Any], monster_lookup: Mapping[str, Any]
+) -> Optional[str]:
     """Return lookup key (clean_name) if ``name`` or ``race`` hits the index."""
     m_name = str(actor.get("name", "")).lower().strip()
     m_race = str(actor.get("race", "")).lower().strip()
@@ -220,7 +221,9 @@ def unique_preserve_order(values: Iterable[str]) -> List[str]:
     return out
 
 
-def build_monster_frame(monsters_csv: str) -> Tuple[pd.DataFrame, Dict[str, Dict[str, Any]]]:
+def build_monster_frame(
+    monsters_csv: str,
+) -> Tuple[pd.DataFrame, Dict[str, Dict[str, Any]]]:
     """
     Load ``dnd_monsters.csv`` and return (annotated DataFrame, dict index).
 
@@ -250,33 +253,47 @@ def build_monster_frame(monsters_csv: str) -> Tuple[pd.DataFrame, Dict[str, Dict
         df_raw["legendary"].fillna("").str.strip().str.lower().eq("legendary")
     ).astype(int)
     _speed = df_raw["speed"].fillna("").str.lower()
-    df_raw["monster_has_mobility"] = _speed.str.contains("fly|swim", regex=True).astype(int)
-    
-    SIZE_ORDINAL = {"tiny": 1, "small": 2, "medium": 3, "large": 4, "huge": 5, "gargantuan": 6}
-    df_raw["monster_size_num"] = df_raw["size"].str.strip().str.lower().map(SIZE_ORDINAL)
-    
+    df_raw["monster_has_mobility"] = _speed.str.contains("fly|swim", regex=True).astype(
+        int
+    )
+
+    SIZE_ORDINAL = {
+        "tiny": 1,
+        "small": 2,
+        "medium": 3,
+        "large": 4,
+        "huge": 5,
+        "gargantuan": 6,
+    }
+    df_raw["monster_size_num"] = (
+        df_raw["size"].str.strip().str.lower().map(SIZE_ORDINAL)
+    )
+
     _STAT_COLS = ["str", "dex", "con", "int", "wis", "cha"]
     df_raw["monster_stat_sum"] = df_raw[_STAT_COLS].sum(axis=1, min_count=1)
     _cr_medians = df_raw.groupby("cr_num")["monster_stat_sum"].transform("median")
     df_raw["monster_stat_sum"] = df_raw["monster_stat_sum"].fillna(_cr_medians)
-    df_raw["monster_stat_sum"] = df_raw["monster_stat_sum"].fillna(df_raw["monster_stat_sum"].median())
+    df_raw["monster_stat_sum"] = df_raw["monster_stat_sum"].fillna(
+        df_raw["monster_stat_sum"].median()
+    )
 
     # 2. Deep Mechanical Traits (from Official Stats CSV)
     try:
         df_official = pd.read_csv("Monster Spreadsheet (D&D5e) - Official Stats.csv")
-        
+
         # Fuzzy matching logic to handle "angel, deva", "assorted beast, aurochs", etc.
         def _get_fuzzy_keys(name: str) -> List[str]:
             n = str(name).lower().strip()
             import re
-            n_no_parens = re.sub(r'\(.*?\)', '', n).strip().replace('-', ' ')
+
+            n_no_parens = re.sub(r"\(.*?\)", "", n).strip().replace("-", " ")
             keys = [n, n_no_parens]
-            if ',' in n_no_parens:
-                parts = [p.strip() for p in n_no_parens.split(',')]
+            if "," in n_no_parens:
+                parts = [p.strip() for p in n_no_parens.split(",")]
                 keys.append(parts[-1])
                 keys.append(parts[0])
                 if len(parts) == 2:
-                    keys.append(parts[1] + ' ' + parts[0])
+                    keys.append(parts[1] + " " + parts[0])
             return keys
 
         # Build a lookup dictionary from the official stats
@@ -285,19 +302,23 @@ def build_monster_frame(monsters_csv: str) -> Tuple[pd.DataFrame, Dict[str, Dict
             wri = str(row.get("WRI", "")).lower()
             additional = str(row.get("Additional", "")).lower()
             # If both are nan/empty string, treat as empty
-            if wri == "nan": wri = ""
-            if additional == "nan": additional = ""
-            
+            if wri == "nan":
+                wri = ""
+            if additional == "nan":
+                additional = ""
+
             for key in _get_fuzzy_keys(row.get("Name", "")):
                 if key not in official_lookup:
                     official_lookup[key] = {"WRI": wri, "Additional": additional}
-                    
+
         # Apply lookup to our dnd_monsters
         def _lookup_trait(name: str, trait_col: str) -> str:
             return official_lookup.get(name, {}).get(trait_col, "")
-            
+
         df_raw["_WRI"] = df_raw["clean_name"].apply(lambda n: _lookup_trait(n, "WRI"))
-        df_raw["_Additional"] = df_raw["clean_name"].apply(lambda n: _lookup_trait(n, "Additional"))
+        df_raw["_Additional"] = df_raw["clean_name"].apply(
+            lambda n: _lookup_trait(n, "Additional")
+        )
 
         # Extract 6 binary flags via the canonical shared extractor
         # (previously this file used regexes that differed from the app's:
@@ -312,14 +333,26 @@ def build_monster_frame(monsters_csv: str) -> Tuple[pd.DataFrame, Dict[str, Dict
         df_raw["monster_has_regeneration"] = traits["regeneration"]
 
         matches = (df_raw["_WRI"] != "") | (df_raw["_Additional"] != "")
-        LOGGER.info("Successfully merged Official Stats for %d / %d monsters.", matches.sum(), len(df_raw))
+        LOGGER.info(
+            "Successfully merged Official Stats for %d / %d monsters.",
+            matches.sum(),
+            len(df_raw),
+        )
 
     except FileNotFoundError:
-        LOGGER.warning("Monster Spreadsheet (D&D5e) - Official Stats.csv not found! Defaulting deep traits to 0.")
-        for col in ["monster_has_physical_res", "monster_immune_to_cc", "monster_has_magic_res", 
-                    "monster_has_pack_tactics", "monster_has_spellcasting", "monster_has_regeneration"]:
+        LOGGER.warning(
+            "Monster Spreadsheet (D&D5e) - Official Stats.csv not found! Defaulting deep traits to 0."
+        )
+        for col in [
+            "monster_has_physical_res",
+            "monster_immune_to_cc",
+            "monster_has_magic_res",
+            "monster_has_pack_tactics",
+            "monster_has_spellcasting",
+            "monster_has_regeneration",
+        ]:
             df_raw[col] = 0
-            
+
     # ── End Monster Trait Extraction ──────────────────────────────────────
 
     # ── Offensive stats (Attack Potency fix) ──────────────────────────────
@@ -410,6 +443,7 @@ def aggregate_encounters(df_turns: pd.DataFrame) -> pd.DataFrame:
     def agg_monsters(series: pd.Series) -> List[str]:
         nested = series.tolist()
         from collections import Counter
+
         max_counts = {}
         for sub in nested:
             counts = Counter(sub)
@@ -441,7 +475,9 @@ def aggregate_encounters(df_turns: pd.DataFrame) -> pd.DataFrame:
     return grouped
 
 
-def attach_monster_stats(df_encounters: pd.DataFrame, df_monsters: pd.DataFrame) -> pd.DataFrame:
+def attach_monster_stats(
+    df_encounters: pd.DataFrame, df_monsters: pd.DataFrame
+) -> pd.DataFrame:
     """
     Vectorized relational join: explode unique matched monsters, merge stats, mean.
 
@@ -551,7 +587,9 @@ def parse_and_aggregate_fireball(
                     if not line:
                         continue
                     try:
-                        record = parse_turn_line(line, file_path, line_idx, monster_lookup)
+                        record = parse_turn_line(
+                            line, file_path, line_idx, monster_lookup
+                        )
                     except json.JSONDecodeError:
                         json_errors += 1
                         LOGGER.debug("JSON decode error at %s:%s", file_path, line_idx)
@@ -587,21 +625,29 @@ def parse_and_aggregate_fireball(
 
     if skip_ongoing:
         before = len(df_encounters)
-        df_encounters = df_encounters[df_encounters["final_outcome"] != "Ongoing"].copy()
-        LOGGER.info("Dropped %d ongoing encounters (unresolved).", before - len(df_encounters))
+        df_encounters = df_encounters[
+            df_encounters["final_outcome"] != "Ongoing"
+        ].copy()
+        LOGGER.info(
+            "Dropped %d ongoing encounters (unresolved).", before - len(df_encounters)
+        )
 
     # Encounters with zero bestiary matches carry no monster signal at all —
     # they were previously exported (21% of rows) only to be dropped at train
     # time.  Remove them here so the CSV is the actual training population.
     before = len(df_encounters)
     df_encounters = df_encounters[df_encounters["num_monsters"] > 0].copy()
-    LOGGER.info("Dropped %d encounters with no matched monsters.", before - len(df_encounters))
+    LOGGER.info(
+        "Dropped %d encounters with no matched monsters.", before - len(df_encounters)
+    )
 
     # Winsorize action-economy outliers (mass-summon logs reach 241 actors).
     # The roster list is truncated too, so total_* sums match the capped count.
-    df_encounters["num_monsters"] = df_encounters["num_monsters"].clip(upper=MAX_MONSTERS)
-    df_encounters["num_monsters_total"] = (
-        df_encounters["num_monsters_total"].clip(upper=MAX_MONSTERS)
+    df_encounters["num_monsters"] = df_encounters["num_monsters"].clip(
+        upper=MAX_MONSTERS
+    )
+    df_encounters["num_monsters_total"] = df_encounters["num_monsters_total"].clip(
+        upper=MAX_MONSTERS
     )
     df_encounters["unique_monsters_list"] = df_encounters["unique_monsters_list"].map(
         lambda lst: lst[:MAX_MONSTERS]

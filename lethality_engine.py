@@ -37,57 +37,77 @@ ROLE_DEFINITIONS: Dict[str, Dict[str, str]] = {
     "Healer": {
         "classes": "Cleric, Druid, Bard",
         "meaning": "Restores HP and removes conditions mid-fight. Turns "
-                   "attrition wars (legendary monsters, regeneration) from "
-                   "losses into wins.",
+        "attrition wars (legendary monsters, regeneration) from "
+        "losses into wins.",
     },
     "Tank": {
         "classes": "Barbarian, Fighter, Paladin",
         "meaning": "High AC/HP frontline that soaks attacks so fragile "
-                   "members don't. Counters pack tactics and melee swarms.",
+        "members don't. Counters pack tactics and melee swarms.",
     },
     "Arcane": {
         "classes": "Wizard, Sorcerer, Warlock",
         "meaning": "Ranged magical damage and battlefield control. The "
-                   "reliable answer to flying/swimming monsters — but loses "
-                   "value against magic resistance.",
+        "reliable answer to flying/swimming monsters — but loses "
+        "value against magic resistance.",
     },
     "Martial DPS": {
         "classes": "Rogue, Monk, Ranger",
         "meaning": "Sustained weapon damage (often ranged). Wins damage "
-                   "races — but halved by nonmagical physical resistance.",
+        "races — but halved by nonmagical physical resistance.",
     },
 }
 
 PARTY_COMPOSITIONS: List[Dict[str, object]] = [
     {
-        "name": "Balanced", "healer": 1, "tank": 1, "arcane": 1, "dps": 1,
+        "name": "Balanced",
+        "healer": 1,
+        "tank": 1,
+        "arcane": 1,
+        "dps": 1,
         "desc": "One of each role — healer, tank, arcane caster, martial DPS. "
-                "The textbook party with an answer to everything; the "
-                "reference point for the True Lethality Level.",
+        "The textbook party with an answer to everything; the "
+        "reference point for the True Lethality Level.",
     },
     {
-        "name": "Glass Cannons", "healer": 0, "tank": 0, "arcane": 1, "dps": 1,
+        "name": "Glass Cannons",
+        "healer": 0,
+        "tank": 0,
+        "arcane": 1,
+        "dps": 1,
         "desc": "All offense, no healer, no tank. Kills fast but folds if "
-                "the monster survives long enough to swing back — high "
-                "variance against bursty or legendary monsters.",
+        "the monster survives long enough to swing back — high "
+        "variance against bursty or legendary monsters.",
     },
     {
-        "name": "The Wall", "healer": 1, "tank": 1, "arcane": 0, "dps": 0,
+        "name": "The Wall",
+        "healer": 1,
+        "tank": 1,
+        "arcane": 0,
+        "dps": 0,
         "desc": "Tanks and healers only. Nearly unkillable but slow to end "
-                "fights — struggles against flyers (no ranged answer) and "
-                "loses long attrition races to regenerating monsters.",
+        "fights — struggles against flyers (no ranged answer) and "
+        "loses long attrition races to regenerating monsters.",
     },
     {
-        "name": "Melee Rush", "healer": 0, "tank": 1, "arcane": 0, "dps": 1,
+        "name": "Melee Rush",
+        "healer": 0,
+        "tank": 1,
+        "arcane": 0,
+        "dps": 1,
         "desc": "Frontline bruisers, no casters, no healer. Great against "
-                "grounded brutes, helpless against flying/swimming monsters "
-                "and punished hard by physical resistance.",
+        "grounded brutes, helpless against flying/swimming monsters "
+        "and punished hard by physical resistance.",
     },
     {
-        "name": "Full Caster", "healer": 1, "tank": 0, "arcane": 1, "dps": 0,
+        "name": "Full Caster",
+        "healer": 1,
+        "tank": 0,
+        "arcane": 1,
+        "dps": 0,
         "desc": "Casters and support, no frontline. Excellent control and "
-                "range, but pack tactics and melee swarms reach the squishy "
-                "backline unopposed; magic resistance blunts the whole plan.",
+        "range, but pack tactics and melee swarms reach the squishy "
+        "backline unopposed; magic resistance blunts the whole plan.",
     },
 ]
 
@@ -135,7 +155,9 @@ Roster = Sequence[Tuple[MonsterProfile, int]]
 MonsterInput = Union[MonsterProfile, Roster]
 
 
-def normalize_roster(monster: MonsterInput, num_monsters: int = 1) -> List[Tuple[MonsterProfile, int]]:
+def normalize_roster(
+    monster: MonsterInput, num_monsters: int = 1
+) -> List[Tuple[MonsterProfile, int]]:
     """Coerce a MonsterProfile or roster into [(profile, count), ...]."""
     if isinstance(monster, MonsterProfile):
         return [(monster, max(1, int(num_monsters)))]
@@ -232,13 +254,18 @@ def predict_win_probability(pipe, rows: List[Dict[str, float]]) -> np.ndarray:
 #
 #     cap = sigmoid(A * rounds_to_kill_party + B)
 #
-# anchored at rtk=1 -> 0.10 (party deleted in one round), rtk=2 -> 0.50,
-# rtk=3 -> 0.90; effectively non-binding (cap ~ 1) for any normal encounter
-# with rtk >= 4.  rounds_to_kill_party comes from the SAME feature math the
-# model trains on, is smooth, increases with party level, and decreases
-# with roster damage — so all engine monotonicity guarantees survive.
-_GUARD_A = 2.197  # solves sigmoid(A*1 + B) = 0.10, sigmoid(A*3 + B) = 0.90
-_GUARD_B = -4.394
+# The constants are CALIBRATED AGAINST DEATHMATCH SIMULATION, not hand-tuned:
+# logistic fit of P(win) on rounds_to_kill_party over the 180-cell Battlecast
+# guard grid (boss CR {5,10,15,21} x count {1..19} x party level {1..20},
+# 2,000 Monte Carlo trials per cell, battlecast.gg engine — see
+# battlecast_bridge/PROVENANCE.md and figures/battlecast_guard_fit.png).
+# Fitted caps: rtk=1 -> 0.09, rtk=2 -> 0.33, rtk=3 -> 0.71, rtk=4 -> 0.93;
+# non-binding above rtk ~ 3.7 (the model's own ceiling takes over), so all
+# in-distribution predictions and engine monotonicity guarantees survive.
+# The original hand-tuned anchors (A=2.197, B=-4.394: 0.10/0.50/0.90 at
+# rtk 1/2/3) turned out slightly too generous in the 2-3 round zone.
+_GUARD_A = 1.6302  # slope of logistic fit on simulated deathmatch outcomes
+_GUARD_B = -3.9771
 
 
 def _survival_cap(rows: List[Dict[str, float]]) -> np.ndarray:
@@ -274,15 +301,15 @@ def predict_win_for_parties(
         variants += [[(m, c)] for m, c in roster]
 
     rows = [
-        encounter_row(variant, **cfg)
-        for variant in variants
-        for cfg in party_configs
+        encounter_row(variant, **cfg) for variant in variants for cfg in party_configs
     ]
     probs = np.minimum(predict_win_probability(pipe, rows), _survival_cap(rows))
     return probs.reshape(len(variants), len(party_configs)).min(axis=0)
 
 
-def _party_config(level: float, party_size: int, comp: Dict[str, object]) -> Dict[str, float]:
+def _party_config(
+    level: float, party_size: int, comp: Dict[str, object]
+) -> Dict[str, float]:
     return {
         "avg_party_level": float(level),
         "party_size": int(party_size),
@@ -328,7 +355,12 @@ def lethality_appraisal(
     if p_low >= target:
         return {**base, "level": 1.0, "verdict": "trivial", "p_at_level": float(p_low)}
     if p_high < target:
-        return {**base, "level": 20.0, "verdict": "beyond_deadly", "p_at_level": float(p_high)}
+        return {
+            **base,
+            "level": 20.0,
+            "verdict": "beyond_deadly",
+            "p_at_level": float(p_high),
+        }
 
     low, high = 1.0, 20.0
     for _ in range(iterations):
@@ -362,8 +394,12 @@ def find_true_lethality_level(
 ) -> float:
     """Backward-compatible wrapper returning just the level."""
     return lethality_appraisal(
-        pipe, monster, num_monsters,
-        target=target, party_size=party_size, iterations=iterations,
+        pipe,
+        monster,
+        num_monsters,
+        target=target,
+        party_size=party_size,
+        iterations=iterations,
     )["level"]
 
 
@@ -502,9 +538,11 @@ def predict_wotc_cr(cr_predictor, features: Dict[str, float]) -> float:
     """
     import xgboost as xgb
 
-    frame = pd.DataFrame([features]).reindex(
-        columns=list(CR_PREDICTOR_FEATURES)
-    ).astype(float)
+    frame = (
+        pd.DataFrame([features])
+        .reindex(columns=list(CR_PREDICTOR_FEATURES))
+        .astype(float)
+    )
     if isinstance(cr_predictor, xgb.Booster):
         # Build from a raw numpy array with EXPLICIT feature names: some
         # pandas/xgboost version pairings fail to detect the DataFrame and
@@ -527,7 +565,11 @@ def load_monster_database(
     """Official bestiary + parsed offensive stats, ready for profile lookup."""
     db = pd.read_csv(csv_path)
     db["clean_name"] = (
-        db["Name"].astype(str).str.lower().str.strip().str.replace("-", " ", regex=False)
+        db["Name"]
+        .astype(str)
+        .str.lower()
+        .str.strip()
+        .str.replace("-", " ", regex=False)
     )
     db["cr_num"] = db["CR"].apply(parse_cr_value)
 
@@ -536,18 +578,37 @@ def load_monster_database(
         db["Additional"], db["Speeds"]
     )
     db[
-        ["physical_res", "cc_immune", "magic_res",
-         "pack_tactics", "spellcasting", "regeneration"]
+        [
+            "physical_res",
+            "cc_immune",
+            "magic_res",
+            "pack_tactics",
+            "spellcasting",
+            "regeneration",
+        ]
     ] = extract_official_traits(db["WRI"], db["Additional"])[
-        ["physical_res", "cc_immune", "magic_res",
-         "pack_tactics", "spellcasting", "regeneration"]
+        [
+            "physical_res",
+            "cc_immune",
+            "magic_res",
+            "pack_tactics",
+            "spellcasting",
+            "regeneration",
+        ]
     ]
 
     for col in ["STR", "DEX", "CON", "INT", "WIS", "CHA"]:
         db[col] = pd.to_numeric(db[col], errors="coerce")
     db["stat_sum"] = db[["STR", "DEX", "CON", "INT", "WIS", "CHA"]].sum(axis=1)
 
-    size_map = {"tiny": 1, "small": 2, "medium": 3, "large": 4, "huge": 5, "gargantuan": 6}
+    size_map = {
+        "tiny": 1,
+        "small": 2,
+        "medium": 3,
+        "large": 4,
+        "huge": 5,
+        "gargantuan": 6,
+    }
     db["size_num"] = db["Size"].str.strip().str.lower().map(size_map)
 
     try:

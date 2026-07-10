@@ -83,7 +83,10 @@ def model_rows(df: pd.DataFrame) -> pd.DataFrame:
             avg_party_level=float(r.party_level),
             party_size=4,
             num_monsters=int(r.num_monsters),
-            has_healer=1, has_tank=1, has_arcane=1, has_martial_dps=1,
+            has_healer=1,
+            has_tank=1,
+            has_arcane=1,
+            has_martial_dps=1,
         )
         for _, r in df.iterrows()
     ]
@@ -93,11 +96,15 @@ def model_rows(df: pd.DataFrame) -> pd.DataFrame:
 def main() -> int:
     results_path = os.path.join(HERE, "results.jsonl")
     if not os.path.exists(results_path):
-        print("results.jsonl not found — run `node battlecast_bridge/run_grid.mjs` first.")
+        print(
+            "results.jsonl not found — run `node battlecast_bridge/run_grid.mjs` first."
+        )
         return 1
     df = load_results(results_path)
-    print(f"Loaded {len(df)} grid cells "
-          f"({(df.n_trials * 1).sum():,} simulated battles).")
+    print(
+        f"Loaded {len(df)} grid cells "
+        f"({(df.n_trials * 1).sum():,} simulated battles)."
+    )
 
     pipe = joblib.load(os.path.join(os.path.dirname(HERE), "true_lethality_model.pkl"))
     raw = model_rows(df)
@@ -106,7 +113,10 @@ def main() -> int:
     df["ttk_party"] = feats["rounds_to_kill_party"].values
     df["p_model"] = pipe.predict_proba(raw[list(RAW_INPUT_COLUMNS)])[:, 1]
 
-    summary: dict = {"n_cells": int(len(df)), "trials_per_cell": int(df.n_trials.iloc[0])}
+    summary: dict = {
+        "n_cells": int(len(df)),
+        "trials_per_cell": int(df.n_trials.iloc[0]),
+    }
 
     # ── 1. Guard calibration ──────────────────────────────────────────────
     g = df[df.grid == "guard"].copy()
@@ -123,20 +133,41 @@ def main() -> int:
     lr = LogisticRegression(C=1e6).fit(Xrep, yrep, sample_weight=wrep)
     a_fit, b_fit = float(lr.coef_[0][0]), float(lr.intercept_[0])
     summary["guard_fit"] = {
-        "slope": a_fit, "intercept": b_fit,
-        "hand_tuned_slope": GUARD_SLOPE, "hand_tuned_intercept": GUARD_INTERCEPT,
+        "slope": a_fit,
+        "intercept": b_fit,
+        "hand_tuned_slope": GUARD_SLOPE,
+        "hand_tuned_intercept": GUARD_INTERCEPT,
     }
-    print(f"Guard fit on deathmatch truth: sigma({a_fit:.3f}*ttk {b_fit:+.3f}) "
-          f"(hand-tuned: sigma({GUARD_SLOPE}*ttk {GUARD_INTERCEPT:+.3f}))")
+    print(
+        f"Guard fit on deathmatch truth: sigma({a_fit:.3f}*ttk {b_fit:+.3f}) "
+        f"(hand-tuned: sigma({GUARD_SLOPE}*ttk {GUARD_INTERCEPT:+.3f}))"
+    )
 
     fig, ax = plt.subplots(figsize=(8, 5.5), dpi=300)
-    ax.scatter(g.ttk_party, g.p_party_win, s=14, alpha=0.55, color=BLUE,
-               label="Battlecast deathmatch (guard grid cells)")
+    ax.scatter(
+        g.ttk_party,
+        g.p_party_win,
+        s=14,
+        alpha=0.55,
+        color=BLUE,
+        label="Battlecast deathmatch (guard grid cells)",
+    )
     xs = np.linspace(0, min(12, g.ttk_party.max() * 1.05), 200)
-    ax.plot(xs, 1 / (1 + np.exp(-(a_fit * xs + b_fit))), color=BLUE, lw=2,
-            label=f"fit: σ({a_fit:.2f}·ttk{b_fit:+.2f})")
-    ax.plot(xs, 1 / (1 + np.exp(-(GUARD_SLOPE * xs + GUARD_INTERCEPT))), color=RED,
-            lw=2, ls="--", label=f"production guard: σ({GUARD_SLOPE}·ttk{GUARD_INTERCEPT:+.2f})")
+    ax.plot(
+        xs,
+        1 / (1 + np.exp(-(a_fit * xs + b_fit))),
+        color=BLUE,
+        lw=2,
+        label=f"fit: σ({a_fit:.2f}·ttk{b_fit:+.2f})",
+    )
+    ax.plot(
+        xs,
+        1 / (1 + np.exp(-(GUARD_SLOPE * xs + GUARD_INTERCEPT))),
+        color=RED,
+        lw=2,
+        ls="--",
+        label=f"production guard: σ({GUARD_SLOPE}·ttk{GUARD_INTERCEPT:+.2f})",
+    )
     ax.set_xlabel("Estimated rounds to kill the party (TTK)")
     ax.set_ylabel("P(party wins) — simulated fight-to-the-death")
     ax.set_title("Survival guard vs Battlecast deathmatch truth")
@@ -150,8 +181,9 @@ def main() -> int:
     m = df[df.grid == "mercy"].copy()
     if m.empty:
         print("Mercy grid empty (partial results file?) — skipping.")
-        with open(os.path.join(FIGURES, "battlecast_summary.json"), "w",
-                  encoding="utf-8") as fh:
+        with open(
+            os.path.join(FIGURES, "battlecast_summary.json"), "w", encoding="utf-8"
+        ) as fh:
             json.dump(summary, fh, indent=2)
         return 0
     m["gap"] = m.p_model - m.p_party_win
@@ -159,12 +191,15 @@ def main() -> int:
         "mean_gap_model_minus_sim": float(m.gap.mean()),
         "corr_model_sim": float(np.corrcoef(m.p_model, m.p_party_win)[0, 1]),
     }
-    print(f"Mercy grid: mean(p_model - p_sim) = {m.gap.mean():+.3f} | "
-          f"corr = {summary['mercy_gap']['corr_model_sim']:.3f}")
+    print(
+        f"Mercy grid: mean(p_model - p_sim) = {m.gap.mean():+.3f} | "
+        f"corr = {summary['mercy_gap']['corr_model_sim']:.3f}"
+    )
 
     fig, ax = plt.subplots(figsize=(6.5, 6), dpi=300)
-    sc = ax.scatter(m.p_party_win, m.p_model, c=m.monster_cr, cmap="viridis",
-                    s=26, alpha=0.8)
+    sc = ax.scatter(
+        m.p_party_win, m.p_model, c=m.monster_cr, cmap="viridis", s=26, alpha=0.8
+    )
     ax.plot([0, 1], [0, 1], ls="--", color=MUTED, lw=1)
     ax.set_xlabel("Battlecast: P(win) in a fight to the death (optimal play)")
     ax.set_ylabel("Model: P(win) at a real table (FIREBALL)")
@@ -177,13 +212,13 @@ def main() -> int:
     # ── 3. OOD agreement ──────────────────────────────────────────────────
     o = df[df.grid == "ood"].copy()
     if len(o):
-        agree = float(
-            np.corrcoef(o.p_model.rank(), o.p_party_win.rank())[0, 1]
-        )
+        agree = float(np.corrcoef(o.p_model.rank(), o.p_party_win.rank())[0, 1])
         summary["ood_rank_correlation"] = agree
         print(f"OOD grid: Spearman rank agreement model vs sim = {agree:.3f}")
 
-    with open(os.path.join(FIGURES, "battlecast_summary.json"), "w", encoding="utf-8") as fh:
+    with open(
+        os.path.join(FIGURES, "battlecast_summary.json"), "w", encoding="utf-8"
+    ) as fh:
         json.dump(summary, fh, indent=2)
     print(f"Wrote figures/battlecast_summary.json + 2 figures.")
     return 0
