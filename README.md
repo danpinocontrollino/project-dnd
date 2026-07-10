@@ -156,8 +156,8 @@ The dataset is imbalanced (~84% Party Wins), and an obvious idea is CTGAN class 
 
 | Training data | Holdout AUC | Brier | Mean predicted P(win) |
 |---|---|---|---|
-| **Real campaigns only (production)** | **0.653** | **0.140** | **0.83** (true base rate 0.82) |
-| Real + CTGAN synthetic losses | 0.640 | 0.185 | 0.61 |
+| **Real campaigns only (production)** | **0.657** | **0.139** | **0.83** (true base rate 0.82) |
+| Real + CTGAN synthetic losses | 0.638 | 0.186 | 0.61 |
 
 Balancing shifts the training base rate from ~83% to ~45%, so the balanced model's probabilities are deflated by ~20 percentage points — and here it does not even buy discrimination (AUC drops too). Since the product decision — "which party level gives a 65% win rate?" — consumes *calibrated* probabilities, the GAN CSV is **not** used for the production model. Its legitimate uses are exactly this ablation, robustness experiments, and as course material on tabular GANs.
 

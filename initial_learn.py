@@ -1221,7 +1221,6 @@ def run_training(
         os.path.splitext(model_output)[0] + "_uncalibrated_xgb.json"
     )
 
-    plot_feature_importances(interp, FEATURE_COLUMNS, "ultimate_feature_importance.png")
     plot_feature_importances(
         interp, FEATURE_COLUMNS, os.path.join(figures_dir, "feature_importance.png")
     )
