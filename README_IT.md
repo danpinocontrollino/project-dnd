@@ -179,6 +179,8 @@ L'aggregazione replica **esattamente** quella usata in addestramento: medie pesa
 
 ## 4. I numeri del modello
 
+> **Metrica primaria: ROC-AUC in cross-validation raggruppata per campagna** — guida la scelta degli iperparametri e il confronto tra modelli. **Guardrail di calibrazione: punteggio di Brier** — il sito consuma probabilità grezze, quindi nessun modello può barattare calibrazione per discriminazione. Le metriche di holdout riportano **intervalli di confidenza bootstrap al 95%** (2.000 ricampionamenti, in `figures/metrics.json`) e ogni addestramento viene registrato in `figures/experiments.jsonl`.
+
 - **P(win)** — la probabilità che il party vinca lo scontro, stimata dal modello e **calibrata**: quando il sito dice 70%, su cento scontri simili nei dati reali circa 70 finiscono in vittoria. La calibrazione usa il metodo di **Platt (sigmoide)**; l'alternativa isotonica è stata provata e scartata perché produceva probabilità "a gradini" che rendevano identici incontri diversi.
 - **ROC-AUC ≈ 0,65** — la probabilità che, presi a caso uno scontro vinto e uno perso, il modello assegni P(win) più alta a quello vinto. 0,5 = moneta, 1 = perfetto. Il valore è **onesto**: misurato con **validazione raggruppata per campagna** (`StratifiedGroupKFold`): gli scontri della stessa campagna Discord condividono party, DM e house rules, quindi finire nello stesso split di train e test gonfierebbe i numeri. Con split casuali si ottengono metriche più alte — ma è *leakage*, non bravura.
 - **Brier ≈ 0,14** — errore quadratico medio delle probabilità. Più informativo dell'accuratezza quando le classi sono sbilanciate (l'83% degli scontri reali è una vittoria).
@@ -243,6 +245,10 @@ pip install -r requirements.txt
 
 # 2. (Opzionale) Rigenerare il dataset dai log FIREBALL (~2 min)
 python3 parse_fireball.py
+
+# In alternativa, l'intera pipeline con un comando solo:
+#   make retrain   (dati -> training -> test -> behavior suite)
+#   make help      (tutti i target disponibili)
 
 # 3. (Opzionale) Riaddestrare i modelli
 python3 initial_learn.py --trials 40 --train-cr-predictor   # con tuning Optuna (~5 min)

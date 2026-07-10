@@ -71,8 +71,14 @@ python3 parse_fireball.py
 ### 2. Training the Model
 To train the XGBoost model on the aggregated data (with Optuna tuning, grouped CV, calibration, SHAP analysis):
 ```bash
+make retrain    # full pipeline: data -> train -> unit tests -> behavior suite
+make tune       # full Optuna search (study persisted to figures/optuna_study.db)
+make help       # all targets
+```
+Or the underlying scripts directly:
+```bash
 python3 initial_learn.py --trials 40 --train-cr-predictor   # full run
-python3 initial_learn.py --no-tune                          # fast run, default params
+python3 initial_learn.py --no-tune                          # fast run, saved params
 ```
 *Outputs the self-contained `true_lethality_model.pkl` pipeline, `figures/metrics.json`, and diagnostic plots (SHAP summary, calibration curve, feature importance, win-rate curve).*
 
@@ -114,6 +120,8 @@ python3 fair_fight_finder.py
 ---
 
 ## 📊 Results
+**Primary metric: campaign-grouped CV ROC-AUC** — it drives hyperparameter selection and model comparison. **Calibration guardrail: Brier score** — because the product consumes raw probabilities, a model may not trade calibration for discrimination. Holdout metrics ship with **bootstrap 95% confidence intervals** (2,000 resamples; see `figures/metrics.json`), and every training run is appended to `figures/experiments.jsonl` for after-the-fact comparison.
+
 Under **honest, campaign-grouped validation** (no same-campaign leakage between train and test), the calibrated model reaches ROC-AUC ≈ 0.65 on held-out campaigns (grouped CV 0.61 ± 0.04), Brier score ≈ 0.14, with well-calibrated probabilities (see `figures/calibration_curve.png` — the calibration folds themselves are now campaign-grouped too). Naive random splits report much higher numbers — that gap *is* the leakage, and reporting it honestly is a feature of this project, not a bug.
 
 SHAP analysis (`figures/shap_summary.png`, computed with XGBoost's native TreeSHAP) shows the strongest signals are **party level, monster damage-per-round, action economy (total monsters on the field), and to-hit geometry** — confirming that offensive potency, which official CR compresses into a single number, is a first-class driver of real combat outcomes.

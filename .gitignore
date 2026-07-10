@@ -18,6 +18,8 @@ figures_debug/
 # FIREBALL dataset's own distribution channel), not in the git history.
 # Comment these out if you deliberately track them with LFS.
 FIREBALL/filtered/
--e 
+# Machine-local experiment storage (history lives in figures/experiments.jsonl)
+figures/optuna_study.db
+
 # Claude Code local settings
 .claude/

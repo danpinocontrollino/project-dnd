@@ -787,12 +787,19 @@ def tune_hyperparameters(
     *,
     n_trials: int = 30,
     n_splits: int = 4,
+    storage_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Optuna search over XGBoost hyperparameters with group-aware CV.
 
     The objective is mean ROC-AUC under StratifiedGroupKFold, so a
     configuration only scores well if it generalizes to *unseen campaigns*
     — the strongest available guard against fitting log noise.
+
+    When ``storage_dir`` is given, the study is persisted to
+    ``<storage_dir>/optuna_study.db`` (SQLite) and *resumed* on the next
+    run — every trial ever attempted stays queryable
+    (``optuna.load_study(...)``), so the search history is an experiment
+    record rather than something that evaporates with the process.
     """
     import optuna
 
@@ -817,8 +824,16 @@ def tune_hyperparameters(
         )
         return float(scores.mean())
 
+    storage = None
+    if storage_dir:
+        os.makedirs(storage_dir, exist_ok=True)
+        storage = f"sqlite:///{os.path.join(storage_dir, 'optuna_study.db')}"
     study = optuna.create_study(
-        direction="maximize", sampler=optuna.samplers.TPESampler(seed=42)
+        direction="maximize",
+        sampler=optuna.samplers.TPESampler(seed=42),
+        storage=storage,
+        study_name="true-lethality-xgb",
+        load_if_exists=storage is not None,
     )
     study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
     LOGGER.info(
@@ -1032,6 +1047,61 @@ def plot_logistic_coefficients(
     LOGGER.info("Saved coefficient plot -> %s", out_path)
 
 
+def _bootstrap_ci(
+    y_true, y_prob, metric_fn, n_boot: int = 2000, seed: int = 42
+) -> Tuple[float, float]:
+    """Percentile-bootstrap 95% CI for a probability metric on the holdout.
+
+    Resamples (y, p) pairs with replacement; degenerate resamples (a single
+    class, where AUC is undefined) are skipped.  2,000 resamples keeps the
+    CI endpoints stable to ~0.001 at n≈7k.
+    """
+    rng = np.random.default_rng(seed)
+    y_true = np.asarray(y_true)
+    y_prob = np.asarray(y_prob)
+    n = len(y_true)
+    stats = []
+    for _ in range(n_boot):
+        idx = rng.integers(0, n, n)
+        if y_true[idx].min() == y_true[idx].max():
+            continue
+        stats.append(metric_fn(y_true[idx], y_prob[idx]))
+    lo, hi = np.percentile(stats, [2.5, 97.5])
+    return float(lo), float(hi)
+
+
+def _append_experiment_record(figures_dir: str, metrics: Dict[str, Any]) -> None:
+    """Append this run to figures/experiments.jsonl (append-only history).
+
+    ``metrics.json`` always reflects the *latest* run and gets overwritten;
+    this log never does, so every training run remains comparable after the
+    fact.  One JSON object per line: timestamp, git commit, and the full
+    metrics/params payload.
+    """
+    import datetime
+    import subprocess
+
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        ).stdout.strip() or None
+    except (OSError, subprocess.SubprocessError):
+        commit = None
+
+    record = {
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(
+            timespec="seconds"
+        ),
+        "git_commit": commit,
+        **metrics,
+    }
+    path = os.path.join(figures_dir, "experiments.jsonl")
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(record) + "\n")
+    LOGGER.info("Appended run record -> %s", path)
+
+
 def run_training(
     input_csv: str,
     figures_dir: str,
@@ -1065,7 +1135,9 @@ def run_training(
             LOGGER.info("model_type=%s: Optuna applies to XGBoost only; skipping.", model_type)
     elif tune:
         LOGGER.info("Tuning hyperparameters with Optuna (%d trials)...", n_trials)
-        params = tune_hyperparameters(X_train, y_train, g_train, n_trials=n_trials)
+        params = tune_hyperparameters(
+            X_train, y_train, g_train, n_trials=n_trials, storage_dir=figures_dir
+        )
     else:
         # Reuse the last tuned configuration when available.
         params = load_params_from_metrics(os.path.join(figures_dir, "metrics.json"))
@@ -1094,11 +1166,15 @@ def run_training(
     # ── Holdout evaluation ────────────────────────────────────────────────
     y_prob = pipe.predict_proba(X_test)[:, 1]
     y_pred = (y_prob >= 0.5).astype(int)
+    auc_ci = _bootstrap_ci(y_test, y_prob, roc_auc_score)
+    brier_ci = _bootstrap_ci(y_test, y_prob, brier_score_loss)
     metrics = {
         "holdout_accuracy": float(accuracy_score(y_test, y_pred)),
         "holdout_roc_auc": float(roc_auc_score(y_test, y_prob)),
+        "holdout_roc_auc_ci95": auc_ci,
         "holdout_pr_auc": float(average_precision_score(y_test, y_prob)),
         "holdout_brier": float(brier_score_loss(y_test, y_prob)),
+        "holdout_brier_ci95": brier_ci,
         "holdout_log_loss": float(log_loss(y_test, y_prob)),
         "cv_roc_auc_mean": float(cv_auc.mean()),
         "cv_roc_auc_std": float(cv_auc.std()),
@@ -1109,9 +1185,12 @@ def run_training(
         "params": params,
     }
     LOGGER.info(
-        "Holdout — acc %.4f | ROC-AUC %.4f | PR-AUC %.4f | Brier %.4f | logloss %.4f",
+        "Holdout — acc %.4f | ROC-AUC %.4f [%.3f, %.3f] | PR-AUC %.4f | "
+        "Brier %.4f [%.3f, %.3f] | logloss %.4f",
         metrics["holdout_accuracy"], metrics["holdout_roc_auc"],
+        auc_ci[0], auc_ci[1],
         metrics["holdout_pr_auc"], metrics["holdout_brier"],
+        brier_ci[0], brier_ci[1],
         metrics["holdout_log_loss"],
     )
     LOGGER.info("\n%s", classification_report(y_test, y_pred, digits=3))
@@ -1120,6 +1199,7 @@ def run_training(
     LOGGER.info("Saved calibrated pipeline -> %s", model_output)
     with open(os.path.join(figures_dir, "metrics.json"), "w", encoding="utf-8") as fh:
         json.dump(metrics, fh, indent=2)
+    _append_experiment_record(figures_dir, metrics)
 
     # ── Interpretation ────────────────────────────────────────────────────
     # SHAP twin is always XGBoost (tree SHAP is exact); for the logistic
