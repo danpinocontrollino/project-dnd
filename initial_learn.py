@@ -764,6 +764,22 @@ def build_model(
     return Pipeline(steps=steps)
 
 
+def load_params_from_metrics(path: str = "figures/metrics.json") -> Dict[str, Any]:
+    """Tuned hyperparameters from a previous run, or the defaults.
+
+    Shared by run_training (--no-tune) and the ablation scripts so every
+    variant trains with the same configuration.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            params = json.load(fh)["params"]
+        LOGGER.info("Reusing tuned params from %s: %s", path, params)
+        return dict(params)
+    except (OSError, KeyError, json.JSONDecodeError):
+        LOGGER.info("No previous tuned params found; using defaults.")
+        return dict(DEFAULT_XGB_PARAMS)
+
+
 def tune_hyperparameters(
     X: pd.DataFrame,
     y: pd.Series,
@@ -1052,12 +1068,7 @@ def run_training(
         params = tune_hyperparameters(X_train, y_train, g_train, n_trials=n_trials)
     else:
         # Reuse the last tuned configuration when available.
-        try:
-            with open(os.path.join(figures_dir, "metrics.json"), "r", encoding="utf-8") as fh:
-                params = json.load(fh)["params"]
-            LOGGER.info("Reusing tuned params from metrics.json: %s", params)
-        except (OSError, KeyError, json.JSONDecodeError):
-            LOGGER.info("No previous tuned params found; using defaults.")
+        params = load_params_from_metrics(os.path.join(figures_dir, "metrics.json"))
 
     # Cross-validated generalization estimate with the chosen params.
     cv = StratifiedGroupKFold(n_splits=4, shuffle=True, random_state=42)

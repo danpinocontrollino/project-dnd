@@ -76,7 +76,7 @@ python3 initial_learn.py --no-tune                          # fast run, default 
 ```
 *Outputs the self-contained `true_lethality_model.pkl` pipeline, `figures/metrics.json`, and diagnostic plots (SHAP summary, calibration curve, feature importance, win-rate curve).*
 
-*(Optional: Use `gan_trial.py` if you wish to experiment with CTGAN synthetic data generation for class balancing, though this is disabled for the production inference tool to preserve true probability calibration).*
+*(Optional: `gan_trial.py` regenerates the CTGAN synthetic-loss dataset and `gan_ablation.py` measures its effect — see the "Synthetic data ablation" section below for why the production model deliberately does **not** train on it. Requires `pip install ctgan`.)*
 
 ### 3. Using the DM Tools
 Web app (interactive win-probability curves, party-size heatmap, homebrew appraiser):
@@ -101,7 +101,8 @@ python3 fair_fight_finder.py
 ├── 📄 lethality_engine.py                # Shared inference core: binary search, party sweeps, win curves.
 ├── 📄 app.py                             # Streamlit web app (Plotly win curves, size×level heatmap).
 ├── 📄 fair_fight_finder.py               # CLI twin of the web app.
-├── 📄 gan_trial.py                       # Experimental CTGAN synthetic data generation.
+├── 📄 gan_trial.py                       # CTGAN synthetic-loss generation (leakage-guarded: fits on training campaigns only).
+├── 📄 gan_ablation.py                    # Measures GAN balancing vs real data on the same campaign holdout.
 ├── 📄 true_lethality_model.pkl           # Exported, self-contained calibrated pipeline.
 ├── 📄 monster_offense_stats.csv          # Per-monster DPR / attack bonus / save DC table (generated).
 ├── 📄 clean_aggregated_combat_data.csv   # ~35,000 real-world encounters with traits + offense (generated).
@@ -135,15 +136,26 @@ The course benchmark (`model_comparison.py`, campaign-grouped 4-fold CV) produce
 
 | Model | Grouped CV AUC | Brier |
 |---|---|---|
-| **Ridge logistic** (Lec 04+05) | **0.656 ± 0.031** | **0.1363** |
-| RFF kernel logistic (Lec 06) | 0.624 ± 0.013 | 0.1418 |
-| XGBoost, monotone-constrained (production) | 0.614 ± 0.033 | 0.1406 |
+| **Ridge logistic** (Lec 04+05) | **0.657 ± 0.029** | **0.1362** |
+| RFF kernel logistic (Lec 06) | 0.621 ± 0.010 | 0.1424 |
+| XGBoost, monotone-constrained (production) | 0.616 ± 0.035 | 0.1398 |
 
 The penalized *linear* model wins on observational predictive risk — the engineered combat-math features carry the signal, and the flexible tree model overfits campaign idiosyncrasies ("small is the new big"). **And yet it is deliberately not the production model.** When promoted, it rated 8 Liches as *trivial* and a 10,000-HP monster as beatable: with no shape constraints, the linear fit absorbs DM-curation confounding (in real logs, many-monster fights are weak mobs that parties beat, so the monster-count coefficient comes out *positive*). The app asks **interventional** questions — "same monster, more of them" — and the monotone-constrained XGBoost, though ~0.04 AUC worse observationally, is the only candidate whose counterfactual sweeps respect domain physics. We accept the predictive-risk penalty to buy decision-grade behavior.
 
+### Synthetic data ablation — when (not) to use `gan_balanced_combat_data.csv`
+
+The dataset is imbalanced (~84% Party Wins), and an obvious idea is CTGAN class balancing: train a GAN on the real losses, synthesize more, train on the 50/50 mix. `gan_trial.py` builds that CSV (leakage-guarded: the GAN fits only on training-campaign losses, and synthetic rows are tagged `encounter_id = "synthetic"`), and `gan_ablation.py` answers whether it helps, evaluating both variants on the **same real held-out campaigns** (`figures/gan_ablation.json`):
+
+| Training data | Holdout AUC | Brier | Mean predicted P(win) |
+|---|---|---|---|
+| **Real campaigns only (production)** | **0.653** | **0.140** | **0.83** (true base rate 0.82) |
+| Real + CTGAN synthetic losses | 0.640 | 0.185 | 0.61 |
+
+Balancing shifts the training base rate from ~83% to ~45%, so the balanced model's probabilities are deflated by ~20 percentage points — and here it does not even buy discrimination (AUC drops too). Since the product decision — "which party level gives a 65% win rate?" — consumes *calibrated* probabilities, the GAN CSV is **not** used for the production model. Its legitimate uses are exactly this ablation, robustness experiments, and as course material on tabular GANs.
+
 Two further course-toolbox results (`figures/course_benchmark.json`):
-- **Kernel two-sample test (MMD, Lec 06 pt 3)**: MMD² = 0.00031, permutation p = 0.12 → no detectable covariate shift between training and held-out campaigns; the CV-holdout gap is campaign-level outcome variance, not distribution shift.
-- **Gaussian Process CR predictor (Lec 06 pt 4)**: GP (RBF + White kernel) beats XGBoost on the 797-monster CR task — MAE 0.86 vs 0.94, R² 0.954 — with 95% predictive intervals achieving exactly **0.95 empirical coverage**.
+- **Kernel two-sample test (MMD, Lec 06 pt 3)**: MMD² = 0.00030, permutation p = 0.14 → no detectable covariate shift between training and held-out campaigns; the CV-holdout gap is campaign-level outcome variance, not distribution shift.
+- **Gaussian Process CR predictor (Lec 06 pt 4)**: GP (RBF + White kernel) beats XGBoost on the 797-monster CR task — MAE 0.88 vs 0.90, R² 0.954 — with 95% predictive intervals achieving exactly **0.95 empirical coverage**.
 
 ---
 
@@ -167,7 +179,7 @@ Two further course-toolbox results (`figures/course_benchmark.json`):
 The parsing regexes and the feature engineer are covered by a pytest suite:
 
 ```bash
-python -m pytest tests/ -q          # 40 unit tests: statblock parsing, DMG tables, traits, features
+python -m pytest tests/ -q          # 87 unit tests: statblock parsing, DMG tables, traits, features, ETL, book math, survival guard
 python behavior_suite.py            # behavioral checks on the trained model (dominance, monotonicity, OOD)
 ```
 
