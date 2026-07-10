@@ -34,6 +34,10 @@ retrain: data train test verify  ## Full pipeline: data -> train -> test -> veri
 benchmark:  ## Course-aligned model comparison (logistic, RFF kernel, MMD, GP)
 	$(PY) model_comparison.py
 
+battlecast:  ## Battlecast deathmatch grid (~15 min) + guard/mercy analysis
+	node battlecast_bridge/run_grid.mjs --trials 2000
+	$(PY) battlecast_bridge/analyze.py
+
 app:  ## Launch the Streamlit site
 	$(PY) -m streamlit run app.py
 
