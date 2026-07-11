@@ -41,6 +41,13 @@ battlecast:  ## Battlecast deathmatch grid (~15 min) + guard/mercy analysis
 slides:  ## Build the exam deck (presentation/slides.pdf); HTML twin needs no build
 	cd presentation && pdflatex -interaction=nonstopmode slides.tex >/dev/null && pdflatex -interaction=nonstopmode slides.tex | tail -2
 
+present-data:  ## Regenerate real-model data for the interactive deck
+	$(PY) presentation/make_interactive_data.py
+
+present:  ## Serve the interactive exam deck at http://localhost:8765
+	@echo "→ http://localhost:8765/presentation/slides_interactive.html"
+	$(PY) -m http.server 8765
+
 app:  ## Launch the Streamlit site
 	$(PY) -m streamlit run app.py
 
