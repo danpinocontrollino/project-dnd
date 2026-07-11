@@ -99,6 +99,20 @@ def main() -> None:
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(out, fh, separators=(",", ":"))
     print(f"wrote {path} ({os.path.getsize(path):,} bytes)")
+
+    # Inline the same JSON into the deck so a plain double-click works in
+    # Safari (fetch() is blocked on file:// URLs).
+    import re
+    html_path = os.path.join(REPO, "presentation", "slides_interactive.html")
+    html = open(html_path, encoding="utf-8").read()
+    payload = json.dumps(out, separators=(",", ":"))
+    html, n = re.subn(
+        r'(<script type="application/json" id="interactiveData">).*?(</script>)',
+        lambda m: m.group(1) + "\n" + payload + "\n" + m.group(2),
+        html, flags=re.S,
+    )
+    open(html_path, "w", encoding="utf-8").write(html)
+    print(f"inlined into slides_interactive.html ({n} block)" )
     print("lich n=1 :", grid["1"][:3], "->", grid["1"][-1])
     print("lich n=19:", grid["19"][:3], "->", grid["19"][-1])
 
