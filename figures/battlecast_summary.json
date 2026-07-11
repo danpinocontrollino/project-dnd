@@ -4,8 +4,10 @@
   "guard_fit": {
     "slope": 1.6302078411769598,
     "intercept": -3.9771375260011195,
-    "hand_tuned_slope": 2.197,
-    "hand_tuned_intercept": -4.394
+    "production_slope": 1.6302,
+    "production_intercept": -3.9771,
+    "original_hand_tuned_slope": 2.197,
+    "original_hand_tuned_intercept": -4.394
   },
   "mercy_gap": {
     "mean_gap_model_minus_sim": -0.12726343172712007,

@@ -107,14 +107,19 @@ python3 fair_fight_finder.py
 ├── 📄 lethality_engine.py                # Shared inference core: binary search, party sweeps, win curves.
 ├── 📄 app.py                             # Streamlit web app (Plotly win curves, size×level heatmap).
 ├── 📄 fair_fight_finder.py               # CLI twin of the web app.
+├── 📄 model_comparison.py                # Course benchmark: ridge logistic, RFF kernel, MMD test, GP.
+├── 📄 behavior_suite.py                  # 13 behavioral acceptance checks (domain axioms).
 ├── 📄 gan_trial.py                       # CTGAN synthetic-loss generation (leakage-guarded: fits on training campaigns only).
 ├── 📄 gan_ablation.py                    # Measures GAN balancing vs real data on the same campaign holdout.
+├── 📄 Makefile                           # One-command pipeline: make retrain / battlecast / app / help.
+├── 📁 tests/                             # 61 pytest units: parsing regexes, feature math, book math, guard.
+├── 📁 battlecast_bridge/                 # Deathmatch simulation grids: vendored engine, collector, analysis.
 ├── 📄 true_lethality_model.pkl           # Exported, self-contained calibrated pipeline.
 ├── 📄 monster_offense_stats.csv          # Per-monster DPR / attack bonus / save DC table (generated).
 ├── 📄 clean_aggregated_combat_data.csv   # ~35,000 real-world encounters with traits + offense (generated).
 ├── 📄 Monster Spreadsheet - Official.csv # Master list of official D&D 5e monsters.
 ├── 📄 srd_5e_monsters.json               # SRD statblocks (source of parsed offensive stats).
-└── 📁 figures/                           # SHAP summary, calibration curve, importances, metrics.json.
+└── 📁 figures/                           # All figures + machine-readable results (see figure index below).
 ```
 
 ---
@@ -136,7 +141,12 @@ The mercy problem cuts deepest where the model needs data most: in fights the da
 P(win) ≤ sigmoid(1.630 · rounds_to_kill_party − 3.977)
 ```
 
-The constants are **calibrated against external deathmatch simulation**, not hand-tuned: a logistic fit of simulated P(win) on `rounds_to_kill_party` over a 180-cell Battlecast grid (boss CR {5,10,15,21} × count {1…19} × party level {1…20}, 2,000 Monte Carlo trials per cell — `battlecast_bridge/`, `figures/battlecast_guard_fit.png`). Fitted caps: 1 round of survival → 9%, 2 rounds → 33%, 3 rounds → 71%; inert above ~3.7 rounds where the model's own ceiling takes over — i.e. everywhere the training data is trustworthy. (The original hand-tuned anchors 0.10/0.50/0.90 proved slightly too generous in the 2–3-round zone.) The cap uses the same feature math the model trains on, is smooth, monotone in level, and decreasing in roster damage, so every engine guarantee (binary-search validity, count monotonicity, roster dominance) survives. Result: 1 Lich → level 3.25, 2 → 6.75, 4 → 12.75, **8+ → beyond deadly**. Pinned by `tests/test_survival_guard.py` and `behavior_suite.py` check 3b.
+The constants are **calibrated against external deathmatch simulation**, not hand-tuned: a binomial-weighted logistic fit of simulated P(win) on `rounds_to_kill_party` over a 180-cell Battlecast grid (boss CR {2, 5, 10, 15, 21} × count {1, 2, 4, 8, 12, 19} × party level {1, 5, 9, 13, 17, 20}, 2,000 Monte Carlo trials per cell — `battlecast_bridge/`, `figures/battlecast_guard_fit.png`). Fitted caps: 1 round of survival → 9%, 2 rounds → 33%, 3 rounds → 71%; inert above ~3.7 rounds where the model's own ceiling takes over — i.e. everywhere the training data is trustworthy. (The original hand-tuned anchors 0.10/0.50/0.90 proved slightly too generous in the 2–3-round zone.) The cap uses the same feature math the model trains on, is smooth, monotone in level, and decreasing in roster damage, so every engine guarantee (binary-search validity, count monotonicity, roster dominance) survives. Result: 1 Lich → level 3.25, 2 → 6.75, 4 → 12.75, **8+ → beyond deadly**. Pinned by `tests/test_survival_guard.py` and `behavior_suite.py` check 3b.
+
+Two companion grids ran alongside the calibration (all three: 304 cells, ~490k simulated battles, `make battlecast` to reproduce):
+
+- **Mercy grid** (25 SRD monsters spanning CR 0–10 × party levels {3, 7, 11, 15}, single monster vs a balanced party of 4 — a systematic sweep, *not* a replay of specific logged encounters): pairing the model's table-reality predictions with Battlecast's deathmatch truth quantifies the mercy/selection gap in both directions — the model sits **~0.14 below** the simulator on deathmatch-easy fights (the FIREBALL base-rate ceiling: retreats and mislabels) and **~0.32 above** it on hard fights (DM mercy inflation), correlation 0.845 (`figures/battlecast_mercy_gap.png`; the hard-fight bins hold only a few cells, so that +0.32 is directional, not precise).
+- **OOD grid** (HP ×{1, 5, 20} / AC +{0, 8} clones of a CR-5 monster × counts × levels, 24 cells): the simulator confirms the extreme verdicts — the ×20-HP clones win ≈ 0.000–0.003 of deathmatches, matching our "beyond deadly" — while mid-range fine ordering agrees only moderately (Spearman 0.54). Fair summary: OOD *verdicts* validated, OOD *fine ranking* beyond either system's resolution.
 
 ### The model-selection lesson (prediction ≠ decision)
 
@@ -148,7 +158,7 @@ The course benchmark (`model_comparison.py`, campaign-grouped 4-fold CV) produce
 | RFF kernel logistic (Lec 06) | 0.621 ± 0.010 | 0.1424 |
 | XGBoost, monotone-constrained (production) | 0.616 ± 0.035 | 0.1398 |
 
-The penalized *linear* model wins on observational predictive risk — the engineered combat-math features carry the signal, and the flexible tree model overfits campaign idiosyncrasies ("small is the new big"). **And yet it is deliberately not the production model.** When promoted, it rated 8 Liches as *trivial* and a 10,000-HP monster as beatable: with no shape constraints, the linear fit absorbs DM-curation confounding (in real logs, many-monster fights are weak mobs that parties beat, so the monster-count coefficient comes out *positive*). The app asks **interventional** questions — "same monster, more of them" — and the monotone-constrained XGBoost, though ~0.04 AUC worse observationally, is the only candidate whose counterfactual sweeps respect domain physics. We accept the predictive-risk penalty to buy decision-grade behavior.
+The penalized *linear* model wins on observational predictive risk — the engineered combat-math features carry the signal, and the flexible tree model overfits campaign idiosyncrasies ("small is the new big"). **And yet it is deliberately not the production model.** When promoted, it rated 8 Liches as *trivial* and a 10,000-HP monster as beatable: with no shape constraints, the linear fit absorbs DM-curation confounding (in real logs, many-monster fights are weak mobs that parties beat, so the monster-count coefficient comes out *positive*). The app asks **interventional** questions — "same monster, more of them" — and the monotone-constrained XGBoost, though ~0.04 AUC worse observationally, is the only candidate whose counterfactual sweeps respect domain physics. We accept the predictive-risk penalty to buy decision-grade behavior. The confounding is on full display in `figures/logistic_coefficients.png` (the rejected model's standardized log-odds): `num_monsters`, `total_monster_dpr` and `max_monster_burst` all carry **positive** coefficients, and — most damning — `avg_party_level` comes out **negative**: the unconstrained fit learned "higher-level parties lose more," because higher-level parties face harder curated content. Textbook selection confounding, readable directly off the coefficients.
 
 ### Synthetic data ablation — when (not) to use `gan_balanced_combat_data.csv`
 
@@ -166,6 +176,21 @@ Two further course-toolbox results (`figures/course_benchmark.json`):
 - **Gaussian Process CR predictor (Lec 06 pt 4)**: GP (RBF + White kernel) beats XGBoost on the 797-monster CR task — MAE 0.88 vs 0.90, R² 0.954 — with 95% predictive intervals achieving exactly **0.95 empirical coverage**.
 
 ---
+
+### Figure index (`figures/`)
+
+| Figure | What it shows |
+|---|---|
+| `shap_summary.png` + `shap_ranking.csv` | Native TreeSHAP beeswarm: which features drive P(win) and in which direction |
+| `feature_importance.png` | XGBoost gain importance (the coarser cousin of SHAP) |
+| `calibration_curve.png` | Predicted vs observed win frequency on held-out campaigns |
+| `feature_correlation_heatmap.png` | Spearman correlations among engineered features (collinearity check) |
+| `win_rate_vs_cr_ratio.png` | Empirical win rate vs normalized challenge, binned, with model overlay |
+| `model_comparison.png` + `.csv` | Course model zoo vs production under grouped CV |
+| `logistic_coefficients.png` | The rejected ridge logistic's coefficients — the confounding exhibit |
+| `battlecast_guard_fit.png` | Deathmatch grid + fitted survival guard vs the old hand-tuned one |
+| `battlecast_mercy_gap.png` | Model (table reality) vs simulator (deathmatch): the mercy/selection gap |
+| `metrics.json` / `experiments.jsonl` / `course_benchmark.json` / `battlecast_summary.json` / `gan_ablation.json` | Machine-readable results: latest run, append-only history, benchmarks |
 
 ## 🎓 Course-Concept Map (SL2026)
 

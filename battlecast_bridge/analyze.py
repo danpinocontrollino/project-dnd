@@ -45,8 +45,15 @@ import __main__
 import joblib
 
 from initial_learn import DnDFeatureEngineer, FEATURE_COLUMNS, RAW_INPUT_COLUMNS
-from lethality_engine import _GUARD_A as GUARD_SLOPE
-from lethality_engine import _GUARD_B as GUARD_INTERCEPT
+from lethality_engine import _GUARD_A as PRODUCTION_SLOPE
+from lethality_engine import _GUARD_B as PRODUCTION_INTERCEPT
+
+# The ORIGINAL hand-tuned anchors (pre-calibration, 2026-07-09): frozen here
+# as the historical comparison line.  Production constants now live in
+# lethality_engine and are EXPECTED to equal this script's fit — main()
+# verifies that and warns if they drift (e.g. after regenerating the grid).
+HAND_TUNED_SLOPE = 2.197
+HAND_TUNED_INTERCEPT = -4.394
 from lethality_engine import MonsterProfile, encounter_row
 
 __main__.DnDFeatureEngineer = DnDFeatureEngineer
@@ -135,13 +142,22 @@ def main() -> int:
     summary["guard_fit"] = {
         "slope": a_fit,
         "intercept": b_fit,
-        "hand_tuned_slope": GUARD_SLOPE,
-        "hand_tuned_intercept": GUARD_INTERCEPT,
+        "production_slope": PRODUCTION_SLOPE,
+        "production_intercept": PRODUCTION_INTERCEPT,
+        "original_hand_tuned_slope": HAND_TUNED_SLOPE,
+        "original_hand_tuned_intercept": HAND_TUNED_INTERCEPT,
     }
     print(
         f"Guard fit on deathmatch truth: sigma({a_fit:.3f}*ttk {b_fit:+.3f}) "
-        f"(hand-tuned: sigma({GUARD_SLOPE}*ttk {GUARD_INTERCEPT:+.3f}))"
+        f"(original hand-tuned: sigma({HAND_TUNED_SLOPE}*ttk {HAND_TUNED_INTERCEPT:+.3f}))"
     )
+    # Consistency check: the deployed constants should BE this fit.
+    if abs(a_fit - PRODUCTION_SLOPE) > 0.05 or abs(b_fit - PRODUCTION_INTERCEPT) > 0.1:
+        print(
+            f"⚠️  Production guard sigma({PRODUCTION_SLOPE}*ttk "
+            f"{PRODUCTION_INTERCEPT:+.3f}) no longer matches this fit — "
+            f"update _GUARD_A/_GUARD_B in lethality_engine.py."
+        )
 
     fig, ax = plt.subplots(figsize=(8, 5.5), dpi=300)
     ax.scatter(
@@ -158,15 +174,15 @@ def main() -> int:
         1 / (1 + np.exp(-(a_fit * xs + b_fit))),
         color=BLUE,
         lw=2,
-        label=f"fit: σ({a_fit:.2f}·ttk{b_fit:+.2f})",
+        label=f"calibrated fit — production guard: σ({a_fit:.2f}·ttk{b_fit:+.2f})",
     )
     ax.plot(
         xs,
-        1 / (1 + np.exp(-(GUARD_SLOPE * xs + GUARD_INTERCEPT))),
+        1 / (1 + np.exp(-(HAND_TUNED_SLOPE * xs + HAND_TUNED_INTERCEPT))),
         color=RED,
         lw=2,
         ls="--",
-        label=f"production guard: σ({GUARD_SLOPE}·ttk{GUARD_INTERCEPT:+.2f})",
+        label=f"previous hand-tuned guard: σ({HAND_TUNED_SLOPE}·ttk{HAND_TUNED_INTERCEPT:+.2f})",
     )
     ax.set_xlabel("Estimated rounds to kill the party (TTK)")
     ax.set_ylabel("P(party wins) — simulated fight-to-the-death")

@@ -195,7 +195,11 @@ Il modello impara dai dati; queste tre guardie gli impediscono di dire sciocchez
 
 1. **Vincoli monotoni + clipping OOD** — dentro XGBoost ogni feature ha un segno imposto (più livello ⇒ mai peggio; più DPR nemico ⇒ mai meglio) e gli input vengono riportati nelle bande legali di 5e (AC 10–30, HP ≤ limiti, livello 1–20…). Un mostro homebrew da 10.000 HP degrada con grazia a "beyond deadly" invece di mandare in tilt gli alberi.
 2. **Dominanza del roster** — negli incontri misti le medie pesate possono "diluire" (Lich + 6 goblin ha CR medio più basso del Lich da solo). Assioma: *aggiungere mostri non può mai rendere lo scontro più facile*. Il motore valuta anche ogni sotto-roster omogeneo e tiene il **minimo** delle probabilità.
-3. **Guardia fisica di sopravvivenza** — la scoperta più importante del progetto: nei log reali persino gli scontri matematicamente senza speranza (party eliminato in ≤1 round) risultano "vinti" l'**84,5%** delle volte — è la *misericordia del DM* (dadi truccati, ritirate, rinforzi). Nessun modello addestrato su quei dati può rispondere a "e se combattessimo 19 Lich **fino alla morte**?". Perciò: `P(win) ≤ sigmoide(1,630 · round_per_uccidere_il_party − 3,977)` — con i coefficienti **calibrati su simulazione esterna di deathmatch** (griglia Battlecast da 180 celle × 2.000 prove Monte Carlo ciascuna, regressione logistica della P(win) simulata sui round di sopravvivenza — vedi `battlecast_bridge/` e `figures/battlecast_guard_fit.png`): party eliminato in 1 round ⇒ tetto 9%, in 2 round ⇒ 33%, in 3 ⇒ 71%, e la guardia è **inerte** sopra ~3,7 round, cioè ovunque i dati di addestramento siano affidabili. (Le ancore originali scelte a mano — 10%/50%/90% — risultavano troppo generose nella zona dei 2–3 round.) Risultato: 1 Lich → livello 3,25 · 2 → 6,75 · 4 → 12,75 · **8+ → beyond deadly**.
+3. **Guardia fisica di sopravvivenza** — la scoperta più importante del progetto: nei log reali persino gli scontri matematicamente senza speranza (party eliminato in ≤1 round) risultano "vinti" l'**84,5%** delle volte — è la *misericordia del DM* (dadi truccati, ritirate, rinforzi). Nessun modello addestrato su quei dati può rispondere a "e se combattessimo 19 Lich **fino alla morte**?". Perciò: `P(win) ≤ sigmoide(1,630 · round_per_uccidere_il_party − 3,977)` — con i coefficienti **calibrati su simulazione esterna di deathmatch** (griglia Battlecast da 180 celle: CR boss {2, 5, 10, 15, 21} × numero {1…19} × livello party {1…20}, 2.000 prove Monte Carlo per cella; regressione logistica pesata della P(win) simulata sui round di sopravvivenza — vedi `battlecast_bridge/` e `figures/battlecast_guard_fit.png`): party eliminato in 1 round ⇒ tetto 9%, in 2 round ⇒ 33%, in 3 ⇒ 71%, e la guardia è **inerte** sopra ~3,7 round, cioè ovunque i dati di addestramento siano affidabili. (Le ancore originali scelte a mano — 10%/50%/90% — risultavano troppo generose nella zona dei 2–3 round.) Risultato: 1 Lich → livello 3,25 · 2 → 6,75 · 4 → 12,75 · **8+ → beyond deadly**.
+
+Accanto alla calibrazione sono state eseguite altre due griglie (in totale 304 celle, ~490.000 battaglie simulate, riproducibili con `make battlecast`):
+- **Griglia "misericordia"** (25 mostri SRD da CR 0 a 10 × livelli {3, 7, 11, 15}, mostro singolo contro party bilanciato di 4 — una scansione sistematica, *non* il replay di incontri realmente registrati): confrontando le previsioni del modello (realtà del tavolo) con la verità deathmatch di Battlecast, il divario di misericordia risulta **bidirezionale**: il modello sta ~0,14 *sotto* il simulatore negli scontri facili (il tetto dell'83% di FIREBALL: ritirate ed etichette rumorose) e ~0,32 *sopra* negli scontri difficili (l'inflazione da misericordia del DM), correlazione 0,845 — `figures/battlecast_mercy_gap.png` (poche celle nei bin difficili: il +0,32 è indicativo, non preciso).
+- **Griglia OOD** (cloni di un mostro CR 5 con HP ×{1, 5, 20} e AC +{0, 8}, 24 celle): il simulatore conferma i verdetti estremi — i cloni con HP ×20 vincono ≈ 0,000–0,003 dei deathmatch, coerente col nostro "beyond deadly" — mentre l'ordinamento fine di metà scala concorda solo moderatamente (Spearman 0,54).
 
 ---
 
@@ -234,6 +238,21 @@ Il modello impara dai dati; queste tre guardie gli impediscono di dire sciocchez
 ```
 
 Perché due interfacce non divergono mai: **tutta** la logica di simulazione vive in `lethality_engine.py`; `app.py` e `fair_fight_finder.py` la importano soltanto.
+
+### Indice delle figure (`figures/`)
+
+| Figura | Cosa mostra |
+|---|---|
+| `shap_summary.png` + `shap_ranking.csv` | SHAP nativo: quali feature guidano la P(win) e in che direzione |
+| `feature_importance.png` | Importanza per gain di XGBoost |
+| `calibration_curve.png` | Probabilità previste vs frequenze osservate su campagne held-out |
+| `feature_correlation_heatmap.png` | Correlazioni di Spearman tra le feature (controllo collinearità) |
+| `win_rate_vs_cr_ratio.png` | Tasso di vittoria empirico vs difficoltà normalizzata, con overlay del modello |
+| `model_comparison.png` + `.csv` | Benchmark del corso vs modello di produzione (CV raggruppata) |
+| `logistic_coefficients.png` | I coefficienti della logistica scartata — la "prova" del confondimento (livello del party col segno sbagliato) |
+| `battlecast_guard_fit.png` | Griglia deathmatch + guardia calibrata vs quella scelta a mano |
+| `battlecast_mercy_gap.png` | Modello (tavolo reale) vs simulatore (deathmatch): il divario di misericordia |
+| `metrics.json` / `experiments.jsonl` / `course_benchmark.json` / `battlecast_summary.json` / `gan_ablation.json` | Risultati leggibili da macchina: ultima run, storico append-only, benchmark |
 
 ---
 
