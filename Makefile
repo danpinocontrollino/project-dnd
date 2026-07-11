@@ -38,6 +38,9 @@ battlecast:  ## Battlecast deathmatch grid (~15 min) + guard/mercy analysis
 	node battlecast_bridge/run_grid.mjs --trials 2000
 	$(PY) battlecast_bridge/analyze.py
 
+slides:  ## Build the exam deck (presentation/slides.pdf); HTML twin needs no build
+	cd presentation && pdflatex -interaction=nonstopmode slides.tex >/dev/null && pdflatex -interaction=nonstopmode slides.tex | tail -2
+
 app:  ## Launch the Streamlit site
 	$(PY) -m streamlit run app.py
 
