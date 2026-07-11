@@ -168,7 +168,7 @@
         </g>
       </svg>
     </div>
-    <p style="margin-top:1.6em;color:#b8a98c">Daniele · NOME 2 · NOME 3 · NOME 4</p>
+    <p style="margin-top:1.6em;color:#b8a98c">Daniele · Francesca · Stefano · Antonietta</p>
     <p class="muted" style="margin-top:.6em"><code>dnd-appraising.streamlit.app</code> · <code>github.com/danpinocontrollino/project-dnd</code></p>
   </div>
 </section>
@@ -184,17 +184,17 @@
     <div class="stat" style="text-align:left;padding:1em">
       <div class="n" style="font-size:1.05em">II · The Data</div>
       <div class="l" style="font-size:.85em;margin-top:.5em">153k chat lines → 34,907 real encounters; damage parsed out of the monster manual's own text; combat math as features.</div>
-      <div class="l" style="margin-top:.5em;color:#e6c35c">NOME 2</div>
+      <div class="l" style="margin-top:.5em;color:#e6c35c">Francesca</div>
     </div>
     <div class="stat" style="text-align:left;padding:1em">
       <div class="n" style="font-size:1.05em">III · The Model</div>
       <div class="l" style="font-size:.85em;margin-top:.5em">XGBoost with shape priors, Platt calibration, campaign-grouped validation — and a linear model that wins AUC yet loses the war.</div>
-      <div class="l" style="margin-top:.5em;color:#e6c35c">NOME 3</div>
+      <div class="l" style="margin-top:.5em;color:#e6c35c">Stefano</div>
     </div>
     <div class="stat" style="text-align:left;padding:1em">
       <div class="n" style="font-size:1.05em">IV · The Lies</div>
       <div class="l" style="font-size:.85em;margin-top:.5em">DM mercy contaminates exactly the fights that matter; three domain guards; 490k simulated deathmatches to calibrate them.</div>
-      <div class="l" style="margin-top:.5em;color:#e6c35c">NOME 4</div>
+      <div class="l" style="margin-top:.5em;color:#e6c35c">Antonietta</div>
     </div>
     <div class="stat" style="text-align:left;padding:1em;border-color:rgba(163,39,58,.6)">
       <div class="n" style="font-size:1.05em">V · The Reckoning</div>
@@ -237,27 +237,46 @@
 </section>
 
 <section class="slide" data-part="Act I — The broken rulebook">
-  <h2>Playing fair with the rulebook — try it <small>live DMG p.82 calculator: the exact code the app runs</small></h2>
-  <div class="widget">
-    <div class="wrow"><label>Monsters in the encounter</label>
+  <h2>Playing fair with the rulebook — try it <small>the FULL DMG p.82 procedure, live — the exact code the app runs (official_encounter_estimate, 9 regression tests)</small></h2>
+  <div class="widget" style="justify-content:space-evenly">
+    <div class="wrow"><label>Step 1 — monsters in the encounter</label>
       <input type="range" id="bmN" min="1" max="19" value="6"><span class="readout" id="bmNv">6</span></div>
-    <div class="wrow"><label>Each monster's CR</label>
+    <div class="wrow"><label>&nbsp;&nbsp;&nbsp;&nbsp;… each of Challenge Rating</label>
       <input type="range" id="bmCR" min="0" max="12" value="4"><span class="readout" id="bmCRv">1</span></div>
-    <div class="wrow" style="justify-content:space-around;background:rgba(0,0,0,.3);border-radius:8px;padding:.7em">
-      <div style="text-align:center"><div class="muted">total XP</div><div class="readout" id="bmXP" style="font-size:1.3em">—</div></div>
-      <div style="text-align:center;font-size:1.5em;color:var(--gold)">×</div>
-      <div style="text-align:center"><div class="muted">multiplier</div><div class="readout" id="bmM" style="font-size:1.3em">—</div></div>
-      <div style="text-align:center;font-size:1.5em;color:var(--gold)">=</div>
-      <div style="text-align:center"><div class="muted">adjusted XP</div><div class="readout" id="bmA" style="font-size:1.3em">—</div></div>
-      <div style="text-align:center;font-size:1.5em;color:var(--gold)">≈</div>
-      <div style="text-align:center"><div class="muted">as difficult as one monster of</div><div class="readout" id="bmEff" style="font-size:1.3em;color:var(--gold2)">—</div></div>
+
+    <div class="wrow" style="gap:.5em">
+      <label style="min-width:11em">Step 2 — the multiplier ladder</label>
+      <span class="muted">monsters:</span>
+      <span class="readout lad" data-lo="1"  data-hi="1">1 <em>×1</em></span>
+      <span class="readout lad" data-lo="2"  data-hi="2">2 <em>×1.5</em></span>
+      <span class="readout lad" data-lo="3"  data-hi="6">3–6 <em>×2</em></span>
+      <span class="readout lad" data-lo="7"  data-hi="10">7–10 <em>×2.5</em></span>
+      <span class="readout lad" data-lo="11" data-hi="14">11–14 <em>×3</em></span>
+      <span class="readout lad" data-lo="15" data-hi="99">15+ <em>×4</em></span>
+      <span class="muted" style="margin-left:auto">(&lt;3 players: one rung up · 6+: one rung down — DMG p.83)</span>
     </div>
-    <p class="muted">Before this fix, the app's “by the book” column showed the single monster's printed CR — 6 × CR-1 displayed as “CR 1”. If we claim to beat the manual, we must implement the manual correctly (<code>official_encounter_estimate()</code>, 9 regression tests).</p>
+
+    <div class="wrow" style="justify-content:space-around;background:rgba(0,0,0,.3);border-radius:8px;padding:.6em">
+      <div style="text-align:center"><div class="muted">total XP</div><div class="readout" id="bmXP" style="font-size:1.25em">—</div></div>
+      <div style="text-align:center;font-size:1.4em;color:var(--gold)">×</div>
+      <div style="text-align:center"><div class="muted">multiplier</div><div class="readout" id="bmM" style="font-size:1.25em">—</div></div>
+      <div style="text-align:center;font-size:1.4em;color:var(--gold)">=</div>
+      <div style="text-align:center"><div class="muted">adjusted XP (step 3)</div><div class="readout" id="bmA" style="font-size:1.25em">—</div></div>
+      <div style="text-align:center;font-size:1.4em;color:var(--gold)">≈</div>
+      <div style="text-align:center"><div class="muted">one monster of</div><div class="readout" id="bmEff" style="font-size:1.25em;color:var(--gold2)">—</div></div>
+    </div>
+
+    <div class="wrow"><label>Step 4 — four heroes of level</label>
+      <input type="range" id="bmL" min="1" max="20" value="5"><span class="readout" id="bmLv">5</span>
+      <span class="muted">party thresholds:</span><span class="readout" id="bmThr" style="min-width:19em;font-size:.85em">—</span>
+      <span class="verdict mid" id="bmTier" style="font-size:1.05em">—</span></div>
+
+    <p class="muted">Per-player XP thresholds from the DMG's own table, ×4 players; <b>☠️ Super-Deadly</b> (≥ 2× Deadly) is our site's extension. Before this fix, the app's “by the book” column showed the single monster's printed CR — 6 × CR-1 displayed as “CR 1”. If we claim to beat the manual, we must implement the manual correctly — and the discrepancies we report are measured against the rulebook's <b>best effort</b>, not a strawman.</p>
   </div>
 </section>
 
 <section class="slide divider" data-part="Act II">
-  <div><div class="roman">II</div><h1>The data</h1><p class="who">Presenter: NOME 2</p></div>
+  <div><div class="roman">II</div><h1>The data</h1><p class="who">Presenter: Francesca</p></div>
 </section>
 
 <section class="slide" data-part="Act II — The data">
@@ -312,7 +331,7 @@
 </section>
 
 <section class="slide divider" data-part="Act III">
-  <div><div class="roman">III</div><h1>The model &amp; honest evaluation</h1><p class="who">Presenter: NOME 3</p></div>
+  <div><div class="roman">III</div><h1>The model &amp; honest evaluation</h1><p class="who">Presenter: Stefano</p></div>
 </section>
 
 <section class="slide" data-part="Act III — Model & evaluation">
@@ -375,7 +394,7 @@
 </section>
 
 <section class="slide divider" data-part="Act IV">
-  <div><div class="roman">IV</div><h1>Where the data lies:<br>guards &amp; simulation</h1><p class="who">Presenter: NOME 4</p></div>
+  <div><div class="roman">IV</div><h1>Where the data lies:<br>guards &amp; simulation</h1><p class="who">Presenter: Antonietta</p></div>
 </section>
 
 <section class="slide" data-part="Act IV — Guards & simulation">
@@ -605,11 +624,23 @@
   function xp2cr(x){ if(x<=XPTAB[0][1])return XPTAB[0][0]; if(x>=XPTAB[XPTAB.length-1][1])return 30;
     for(let k=0;k<XPTAB.length-1;k++){ const[a,va]=XPTAB[k],[b,vb]=XPTAB[k+1];
       if(x>=va&&x<=vb) return a+(b-a)*(x-va)/(vb-va); } return 30; }
-  function bm(){ const n=+bmN.value, cr=CRS[+bmCR.value], tot=XP[cr]*n, m=mult(n), adj=tot*m;
-    bmNv.textContent=n; bmCRv.textContent=cr; bmXP.textContent=tot.toLocaleString();
-    bmM.textContent='×'+m; bmA.textContent=adj.toLocaleString();
-    bmEff.textContent='CR '+(Math.round(xp2cr(adj)*4)/4); }
-  bmN.oninput=bm; bmCR.oninput=bm; bm();
+  // DMG per-player XP thresholds by level: [easy, medium, hard, deadly]
+  const LT={1:[25,50,75,100],2:[50,100,150,200],3:[75,150,225,400],4:[125,250,375,500],5:[250,500,750,1100],6:[300,600,900,1400],7:[350,750,1100,1700],8:[450,900,1400,2100],9:[550,1100,1600,2400],10:[600,1200,1900,2800],11:[800,1600,2400,3600],12:[1000,2000,3000,4500],13:[1100,2200,3400,5100],14:[1250,2500,3800,5700],15:[1400,2800,4300,6400],16:[1600,3200,4800,7200],17:[2000,3900,5900,8800],18:[2100,4200,6300,9500],19:[2400,4900,7300,10900],20:[2800,5700,8500,12700]};
+  function bm(){ const n=+bmN.value, cr=CRS[+bmCR.value], tot=XP[cr]*n, m=mult(n), adj=tot*m, L=+bmL.value;
+    bmNv.textContent=n; bmCRv.textContent=cr; bmLv.textContent=L;
+    bmXP.textContent=tot.toLocaleString(); bmM.textContent='×'+m; bmA.textContent=adj.toLocaleString();
+    bmEff.textContent='CR '+(Math.round(xp2cr(adj)*4)/4);
+    document.querySelectorAll('.lad').forEach(el=>{
+      const on = n>=+el.dataset.lo && n<=+el.dataset.hi;
+      el.style.borderColor = on ? 'var(--gold)' : 'transparent';
+      el.style.border = '1px solid ' + (on ? 'var(--gold2)' : 'rgba(201,162,39,.2)');
+      el.style.color = on ? 'var(--gold2)' : '#8d7f68'; });
+    const t=LT[L], e=t[0]*4, md=t[1]*4, h=t[2]*4, d=t[3]*4;
+    bmThr.textContent = 'E '+e.toLocaleString()+' · M '+md.toLocaleString()+' · H '+h.toLocaleString()+' · D '+d.toLocaleString();
+    const tier = adj>=2*d ? ['☠️ SUPER-DEADLY','dead'] : adj>=d ? ['Deadly','dead'] :
+                 adj>=h ? ['Hard','mid'] : adj>=md ? ['Medium','mid'] : ['Easy','ok'];
+    bmTier.textContent = tier[0]; bmTier.className = 'verdict '+tier[1]; }
+  bmN.oninput=bm; bmCR.oninput=bm; bmL.oninput=bm; bm();
 
   /* ── SVG helpers ── */
   const S=(tag,attrs,parent)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',tag);
@@ -728,6 +759,8 @@
         document.getElementById('d20msg').textContent =
           n===20 ? 'NATURAL 20 — critical success: the professor asks an easy question.' :
           n===1  ? 'natural 1 — someone asks about the pandas version pins.' :
+          (n>=17 && n<=19) ? "great! we don't have to talk about theory today ;)" :
+          (n>=2 && n<=10) ? 'ugh - Pierpa is perplexed by the presentation' :
           'rolled '+n+' — a fair question approaches.';
       }},70);
   });
