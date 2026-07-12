@@ -31,6 +31,10 @@
     --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
+  /* Root font scales with the 16:9 stage (16px at 1280x720), so every slide
+     renders identically on a laptop, a projector or a phone — dense content
+     never clips on small screens. */
+  html{font-size:clamp(8px, min(1.25vw, 2.223vh), 24px)}
   html,body{height:100%;background:var(--bg);font-family:var(--sans);color:var(--parch)}
 
   .deck{position:relative;height:100%;overflow:hidden}
@@ -176,35 +180,45 @@
 <section class="slide" data-part="The Quest">
   <h2>The quest, in five acts <small>Daniele — our resident dungeon master — opens the tale and returns for the reckoning</small></h2>
   <div class="stats" style="grid-template-columns:repeat(5,1fr);flex:1;align-items:stretch;gap:.8em">
-    <div class="stat" style="text-align:left;padding:1em;border-color:rgba(163,39,58,.6)">
+    <div class="stat" style="text-align:left;padding:1em;border-color:rgba(163,39,58,.6);display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">I · The Broken Rulebook</div>
       <div class="l" style="font-size:.85em;margin-top:.5em">D&amp;D in 60 seconds, why CR is a promise nobody checked, our estimand — and the DMG's own math, implemented honestly.</div>
       <div class="l" style="margin-top:.5em;color:#e6c35c">Daniele</div>
       <div class="l" style="margin-top:.4em;font-size:.78em;opacity:.85">⚔ boss fight: the DMG, computed live on stage</div>
+      <div class="l" style="margin-top:.45em;font-size:.74em;line-height:1.5;border-top:1px solid rgba(201,162,39,.25);padding-top:.45em">CR &amp; the unchecked promise · the estimand &amp; the three verdicts · the full p.82 calculator</div>
+      <div class="l" style="margin-top:auto;padding-top:.5em;font-size:.72em;font-family:var(--mono);color:#e6c35c">6 × CR-1 = one CR-4¼ fight — the book, done right</div>
     </div>
-    <div class="stat" style="text-align:left;padding:1em">
+    <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">II · The Data</div>
       <div class="l" style="font-size:.85em;margin-top:.5em">153k chat lines → 34,907 real encounters; damage parsed out of the monster manual's own text; combat math as features.</div>
       <div class="l" style="margin-top:.5em;color:#e6c35c">Francesca</div>
       <div class="l" style="margin-top:.4em;font-size:.78em;opacity:.85">⚔ boss fight: the Lich statblock, parsed by regex</div>
+      <div class="l" style="margin-top:.45em;font-size:.74em;line-height:1.5;border-top:1px solid rgba(201,162,39,.25);padding-top:.45em">the FIREBALL pipeline &amp; its 29-column rows · DPR vs burst · 45 features, SHAP-ranked</div>
+      <div class="l" style="margin-top:auto;padding-top:.5em;font-size:.72em;font-family:var(--mono);color:#e6c35c">321/762 real statblocks · Lich: DPR 45, burst 100</div>
     </div>
-    <div class="stat" style="text-align:left;padding:1em">
+    <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">III · The Model</div>
       <div class="l" style="font-size:.85em;margin-top:.5em">XGBoost with shape priors, Platt calibration, campaign-grouped validation — and a linear model that wins AUC yet loses the war.</div>
       <div class="l" style="margin-top:.5em;color:#e6c35c">Stefano</div>
       <div class="l" style="margin-top:.4em;font-size:.78em;opacity:.85">⚔ boss fight: a linear model wins AUC — and loses</div>
+      <div class="l" style="margin-top:.45em;font-size:.74em;line-height:1.5;border-top:1px solid rgba(201,162,39,.25);padding-top:.45em">shape priors &amp; Optuna · grouped CV with CIs · Platt vs isotonic · the model zoo table</div>
+      <div class="l" style="margin-top:auto;padding-top:.5em;font-size:.72em;font-family:var(--mono);color:#e6c35c">AUC 0.657 [0.638, 0.674] · Brier 0.139 · 1,462 campaigns</div>
     </div>
-    <div class="stat" style="text-align:left;padding:1em">
+    <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">IV · The Lies</div>
       <div class="l" style="font-size:.85em;margin-top:.5em">DM mercy contaminates exactly the fights that matter; three domain guards; 490k simulated deathmatches to calibrate them.</div>
       <div class="l" style="margin-top:.5em;color:#e6c35c">Antonietta</div>
       <div class="l" style="margin-top:.4em;font-size:.78em;opacity:.85">⚔ boss fight: the Lich Lab: the real model, live</div>
+      <div class="l" style="margin-top:.45em;font-size:.74em;line-height:1.5;border-top:1px solid rgba(201,162,39,.25);padding-top:.45em">the 19-Lich quiz · DM mercy = 84.5% · three guards · 490k deathmatches, guard calibrated</div>
+      <div class="l" style="margin-top:auto;padding-top:.5em;font-size:.72em;font-family:var(--mono);color:#e6c35c">σ(1.63·TTK − 3.98) — zero hand-tuned constants left</div>
     </div>
-    <div class="stat" style="text-align:left;padding:1em;border-color:rgba(163,39,58,.6)">
+    <div class="stat" style="text-align:left;padding:1em;border-color:rgba(163,39,58,.6);display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">V · The Reckoning</div>
       <div class="l" style="font-size:.85em;margin-top:.5em">The live appraiser, the limits we state out loud, five takeaways — and one last d20.</div>
       <div class="l" style="margin-top:.5em;color:#e6c35c">Daniele</div>
       <div class="l" style="margin-top:.4em;font-size:.78em;opacity:.85">⚔ boss fight: one final d20 for the questions</div>
+      <div class="l" style="margin-top:.45em;font-size:.74em;line-height:1.5;border-top:1px solid rgba(201,162,39,.25);padding-top:.45em">the live appraiser &amp; demo script · four limits, four mitigations · six numbers to remember</div>
+      <div class="l" style="margin-top:auto;padding-top:.5em;font-size:.72em;font-family:var(--mono);color:#e6c35c">61 tests · 13 axioms · dnd-appraising.streamlit.app</div>
     </div>
   </div>
 </section>
@@ -222,8 +236,8 @@
       <li>The rulebook's recipe (DMG p.82): sum monster XP, multiply for monster count, compare with per-level thresholds.</li>
     </ul>
     <div style="display:grid;gap:1em">
-      <div class="card"><span class="title">The official promise</span>A CR-5 monster ≈ a fair fight for four level-5 heroes.</div>
-      <div class="card"><span class="title">The reality</span>CR is a <b>design intention</b> — never validated against actual play. Nobody had checked. So we did.</div>
+      <div class="card"><span class="title">The official promise</span>A CR-5 monster ≈ a fair fight for four level-5 heroes. The DMG's encounter tables (p.82) turn CR into XP budgets and grade every fight Easy → Deadly. One number is supposed to summarize offense, defense, traits and action economy.</div>
+      <div class="card"><span class="title">The reality</span>CR is a <b>design intention</b> — never validated against actual play. Known failure modes every DM meets: high-CR solos that fold to action economy, low-CR swarms that kill, trait synergies (a flyer vs a melee party) invisible to a single score. Nobody had measured any of this. So we did — 34,907 times.</div>
       <div class="card"><span class="title">The cast of this talk</span>
         <div style="display:grid;grid-template-columns:auto auto;gap:.25em .8em;font-size:.95em">
           <span>Goblin</span><b style="text-align:right">CR 1/4</b>
@@ -249,21 +263,27 @@
     <li>Everything downstream consumes <strong>probabilities</strong> → calibration is a first-class requirement, measured (Brier, reliability curves), never assumed.</li>
     <li>The search: <strong>binary search on party level 1–20</strong> (18 iterations, answer snapped to quarter levels), against a fixed reference — a balanced party of four.</li>
   </ul>
-  <div class="stats" style="grid-template-columns:repeat(3,1fr);flex:1;align-items:stretch">
-    <div class="stat" style="text-align:left;padding:1em">
+  <div class="stats" style="grid-template-columns:repeat(3,1fr);flex:1;align-items:stretch;margin-top:.5em">
+    <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.1em;color:#8fdb9b">🕊️ trivial</div>
-      <div class="l" style="font-size:.88em;margin-top:.5em">P(win) ≥ target already at <b>level 1</b>. Real tables reliably beat this at any level — no fractional level is invented.</div>
+      <div class="l" style="font-size:.88em;margin-top:.5em">P(win) ≥ target already at <b>level 1</b>. Real tables reliably beat this at any level — no fractional level is invented.<br><br>
+      <b>Seen in the wild:</b> Goblin (P(win) at level 1 ≈ 87%), Ogre, a pack of six CR-1 wolves. The 83% base rate makes weak monsters saturate near the ceiling for every level — so the app <b>explains the saturation</b> instead of printing a meaningless “level 0.25”.<br><br>
+      This verdict is itself a finding: at real tables, the danger of weak monsters is attrition across a day, never the single fight.</div>
     </div>
-    <div class="stat" style="text-align:left;padding:1em">
+    <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.1em">⚔️ level L</div>
-      <div class="l" style="font-size:.88em;margin-top:.5em">The target is crossed inside [1, 20]: <b>L is the True Lethality Level</b>, reported with the exact win probability at that level.</div>
+      <div class="l" style="font-size:.88em;margin-top:.5em">The target is crossed inside [1, 20]: <b>L is the True Lethality Level</b>, reported with the exact win probability at that level.<br><br>
+      <b>Seen in the wild:</b> 1 Lich → 3.25 · 2 Liches → 6.75 · 4 Liches → 12.75. Official CR for the Lich says 21 — the single biggest book-vs-data discrepancy we measured.<br><br>
+      We report “level 12.75 <i>(64.6% win at this level)</i>” because two encounters can share a level and still differ in risk — the probability is the product, the level is the summary.</div>
     </div>
-    <div class="stat" style="text-align:left;padding:1em">
+    <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.1em;color:#ff9b9b">☠️ beyond deadly</div>
-      <div class="l" style="font-size:.88em;margin-top:.5em">P(win) &lt; target even at <b>level 20</b>. A TPK machine — the app says so instead of extrapolating.</div>
+      <div class="l" style="font-size:.88em;margin-top:.5em">P(win) &lt; target even at <b>level 20</b>. A TPK machine — the app says so instead of extrapolating.<br><br>
+      <b>Seen in the wild:</b> the Tarrasque; 8+ Liches; any homebrew past the physics guard (19 Liches: P(win) at level 20 = <b>9.1%</b>).<br><br>
+      The verdict ships with its ceiling — “even a level-20 party only wins X%” — so the DM knows <i>how far</i> beyond deadly, without us inventing a fantasy “level 27” the model has no support for.</div>
     </div>
   </div>
-  <p class="muted">Why 65%? It is a <b>policy, not a constant</b>: the app exposes it as a slider (0.50–0.90). Real tables win 83% of fights, so ~0.85 ≈ “typical curated encounter” and 0.55 ≈ “a true coin flip”.</p>
+  <p class="muted" style="font-size:.78em;margin-top:.4em">Why 65%? It is a <b>policy, not a constant</b>: the app exposes it as a slider (0.50–0.90). Real tables win 83% of fights, so ~0.85 ≈ “typical curated encounter” and 0.55 ≈ “a true coin flip”.</p>
 </section>
 
 <section class="slide" data-part="Act I — The broken rulebook">
@@ -496,6 +516,8 @@
         <span>Four heroes, level 8</span><b style="text-align:right">balanced</b>
         <span>Pooled hit points (engine estimate)</span><b style="text-align:right">≈ 240</b>
         <span>Party damage per round</span><b style="text-align:right">≈ 73</b>
+        <span>Damage landed per round (vs AC 17)</span><b style="text-align:right">≈ 47</b>
+        <span>Rounds to clear 2,565 pooled HP</span><b style="text-align:right">≈ 70</b>
       </div>
     </div>
     <div class="card"><span class="title">In the red corner — nineteen Liches</span>
@@ -503,6 +525,8 @@
         <span>Pooled hit points</span><b style="text-align:right">2,565</b>
         <span>Pooled damage per round</span><b style="text-align:right">855</b>
         <span>Save DC · burst per Lich</span><b style="text-align:right">20 · 100</b>
+        <span>Damage landed per round (vs party)</span><b style="text-align:right">≈ 555</b>
+        <span>Rounds until the party is deleted</span><b style="text-align:right;color:#d03b3b">&lt; 1</b>
       </div>
     </div>
   </div>
@@ -609,7 +633,7 @@
           <span>3 · homebrew: 10,000 HP, AC 50 → graceful <b>beyond deadly</b>, no crash</span>
         </div>
       </div>
-      <div class="card"><span class="title">Engineering rigor</span>61 unit tests + 13 behavioral axioms (<code>make verify</code>) · bootstrap CIs · append-only experiment log · pinned environment · one-command pipeline (<code>make retrain</code>).</div>
+      <div class="card"><span class="title">Engineering rigor</span>61 unit tests (parsing regexes, feature math, book math, guard anchors) + 13 behavioral axioms — count monotonicity, roster dominance, level monotonicity, boundary verdicts, OOD via the real CR-predictor flow (<code>make verify</code>) · bootstrap CIs on every metric · append-only <code>experiments.jsonl</code> + persisted Optuna study · pinned environment · one-command pipeline (<code>make retrain</code>).</div>
     </div>
   </div>
 </section>
@@ -617,21 +641,21 @@
 <section class="slide" data-part="Act V — The reckoning">
   <h2>Limits — stated, not hidden</h2>
   <div class="stats" style="grid-template-columns:1fr 1fr;flex:1;align-items:stretch;gap:1em">
-    <div class="stat" style="text-align:left;padding:1em">
+    <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">Observational ceiling</div>
-      <div class="l" style="font-size:.9em;margin-top:.5em">AUC 0.657 [0.638, 0.674] in an 83%-win world: dice, tactics and unrecorded magic items are irreducible noise. The model <b>ranks</b> encounters well; it is no oracle — and the CIs are on every claim.</div>
+      <div class="l" style="font-size:.9em;margin-top:.5em">AUC 0.657 [0.638, 0.674], PR-AUC 0.874, log-loss 0.447 in an 83%-win world: dice variance, table tactics, homebrew magic items and DM style are irreducible noise the features cannot see. The model <b>ranks</b> encounters well; it is no oracle.<br><br>Naive random splits report far higher numbers — that gap <b>is</b> same-campaign leakage, and we show it instead of shipping it. Every headline metric carries a bootstrap 95% CI (2,000 resamples).</div>
     </div>
-    <div class="stat" style="text-align:left;padding:1em">
+    <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">Estimand mismatch</div>
-      <div class="l" style="font-size:.9em;margin-top:.5em">“Fight to the death” is not in observational data. Handled by an <b>explicit, sim-calibrated guard</b> — a documented modeling choice with its own tests, not something silently learned.</div>
+      <div class="l" style="font-size:.9em;margin-top:.5em">“Fight to the death” is not in observational data: in the logs, fights the damage math calls hopeless were still “won” <b>84.5%</b> of the time (659 rows of DM mercy).<br><br>Handled by an explicit cap, σ(1.63·TTK − 3.98) — fitted on the Battlecast guard grid, anchors 9% / 33% / 71% at 1 / 2 / 3 rounds of survival, inert above ≈ 3.7 where training data is trustworthy. A documented modeling <b>choice</b> with its own regression tests, not something silently learned.</div>
     </div>
-    <div class="stat" style="text-align:left;padding:1em">
+    <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">Simulator caveats</div>
-      <div class="l" style="font-size:.9em;margin-top:.5em">Battlecast runs 2024-SRD rules vs our 2014-era logs, with scripted optimal play ⇒ deathmatch numbers are an <b>upper bound</b>. Stated in the provenance file, restated here.</div>
+      <div class="l" style="font-size:.9em;margin-top:.5em">Battlecast runs <b>2024-SRD rules</b> (317 statblocks) while our logs are 2014-era play — several monsters were rebalanced between editions. Its heroes are optimized default builds with scripted play ⇒ deathmatch win rates are an <b>upper bound</b> on real-table performance.<br><br>The engine is vendored (three unmodified public assets) so the grid runs locally, reproducibly, with zero load on the service — full credits and caveats in <code>battlecast_bridge/PROVENANCE.md</code>.</div>
     </div>
-    <div class="stat" style="text-align:left;padding:1em">
+    <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">Thin support on hard fights</div>
-      <div class="l" style="font-size:.9em;margin-top:.5em">Curated play rarely produces hopeless battles (mercy-grid hard bins hold few cells → +0.32 is directional). Next: VTT instrumentation, post-encounter forms with explicit <b>retreat/fudge labels</b>, an all-SRD replay grid.</div>
+      <div class="l" style="font-size:.9em;margin-top:.5em">Curated play rarely produces hopeless battles: 96 of 100 mercy-grid cells are deathmatch-easy, so the +0.32 mercy estimate rests on a handful of hard cells — directional, not precise.<br><br>Next steps, in order of value: a Foundry VTT module (~200 lines) exporting clean combat events; a 30-second post-encounter form adding explicit <b>retreat/fudge labels</b> — turning mercy from contamination into a censoring variable; an all-SRD replay grid re-fighting real logged encounters in the simulator.</div>
     </div>
   </div>
 </section>
