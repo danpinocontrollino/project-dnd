@@ -230,11 +230,21 @@
 <section class="slide" data-part="Act I — The broken rulebook">
   <h2>D&amp;D combat in 60 seconds</h2>
   <div class="cols">
-    <ul>
-      <li>A <strong>party</strong> (3–6 heroes, levels 1–20) versus <strong>monsters</strong> run by the Dungeon Master.</li>
-      <li>Every monster carries a <strong>Challenge Rating (CR)</strong> — the official danger score, 0 to 30.</li>
-      <li>The rulebook's recipe (DMG p.82): sum monster XP, multiply for monster count, compare with per-level thresholds.</li>
-    </ul>
+    <div>
+      <ul>
+        <li>A <strong>party</strong> (3–6 heroes, levels 1–20) versus <strong>monsters</strong> run by the Dungeon Master. Combat runs in rounds: initiative order, one action + movement each — <strong>action economy</strong> is why numbers matter more than any single statblock.</li>
+        <li>Every monster carries a <strong>Challenge Rating (CR)</strong> — the official danger score, 0 to 30, printed once and never audited.</li>
+        <li>The rulebook's recipe (DMG p.82): sum monster XP, multiply for monster count, compare with per-level thresholds → Easy / Medium / Hard / Deadly.</li>
+      </ul>
+      <div class="card" style="margin-top:.9em"><span class="title">The four roles our model sees (from the class logs)</span>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:.25em 1em;font-size:.88em">
+          <b>Healer</b><span>Cleric · Druid · Bard — turns attrition wars around</span>
+          <b>Tank</b><span>Barbarian · Fighter · Paladin — soaks the frontline</span>
+          <b>Arcane</b><span>Wizard · Sorcerer · Warlock — range &amp; control, the answer to flyers</span>
+          <b>Martial DPS</b><span>Rogue · Monk · Ranger — sustained damage, halved by physical resistance</span>
+        </div>
+      </div>
+    </div>
     <div style="display:grid;gap:1em">
       <div class="card"><span class="title">The official promise</span>A CR-5 monster ≈ a fair fight for four level-5 heroes. The DMG's encounter tables (p.82) turn CR into XP budgets and grade every fight Easy → Deadly. One number is supposed to summarize offense, defense, traits and action economy.</div>
       <div class="card"><span class="title">The reality</span>CR is a <b>design intention</b> — never validated against actual play. Known failure modes every DM meets: high-CR solos that fold to action economy, low-CR swarms that kill, trait synergies (a flyer vs a melee party) invisible to a single score. Nobody had measured any of this. So we did — 34,907 times.</div>
@@ -392,7 +402,17 @@
         <span>Attack bonus</span><b style="text-align:right">+12</b>
         <span>Save DC</span><b style="text-align:right">20</b>
       </div>
-      <div style="font-size:.75em;color:#6d5c46;margin-top:.6em">parsed from the SRD statblock — the spell list names Power Word Kill; a PHB damage table prices it</div>
+      <div style="font-size:.75em;color:#6d5c46;margin-top:.6em">parsed from the SRD statblock — the spell list names Power Word Kill; a 30-spell PHB damage table prices it (sustained casting capped at fireball-class 45)</div>
+    </div>
+    <div class="card" style="margin-top:1em"><span class="title">Spot-checks vs hand-computed truth</span>
+      <div style="display:grid;grid-template-columns:auto auto auto;gap:.25em .9em;font-size:.85em">
+        <span></span><b style="text-align:right">parsed</b><b style="text-align:right">true</b>
+        <span>Goblin (scimitar)</span><span style="text-align:right">5</span><span style="text-align:right">5</span>
+        <span>Tarrasque (5-attack routine)</span><span style="text-align:right">150</span><span style="text-align:right">≈148</span>
+        <span>Adult Red Dragon (bite + claws)</span><span style="text-align:right">58</span><span style="text-align:right">≈45–48</span>
+        <span>Lich (sustained / burst)</span><span style="text-align:right">45 / 100</span><span style="text-align:right">≈40–60 / 100</span>
+      </div>
+      <div style="font-size:.75em;color:#6d5c46;margin-top:.5em">DPR clamped to [0.25×, 3×] of the DMG design band per CR — one regex mishap can't create a CR-1 monster with DPR 400.</div>
     </div>
   </div>
 </section>
@@ -429,9 +449,10 @@
   <h2>Gradient boosting with domain priors</h2>
   <div class="cols">
     <ul>
-      <li><strong>XGBoost</strong>, 45 features, Optuna-tuned under grouped CV: 300 trees, depth 4, heavy subsampling — shallow, as noisy logs demand.</li>
-      <li><strong>45 monotone constraints</strong> as shape priors: more party level can never hurt, more monster DPR can never help.</li>
-      <li>Inputs clipped to legal 5e ranges → graceful out-of-distribution behavior.</li>
+      <li><strong>XGBoost</strong>, 45 features, Optuna-tuned under grouped CV: 300 trees, depth 4, heavy subsampling — shallow and regularized, exactly what noisy real-play logs demand.</li>
+      <li><strong>45 monotone constraints</strong> as shape priors baked into every split: party level, size and each role flag <b>+</b>; monster count, CR, HP, DPR, burst, attack bonus, save DC and every hostile trait <b>−</b>. Higher level can never hurt; more monster DPR can never help.</li>
+      <li>Inputs clipped to legal 5e bands before features: level 1–20, roster ≤ 30, AC 10–30, DPR ≤ 350 (≤ 1,500 pooled), burst ≤ 400, save DC 8–30 ⇒ a 10,000-HP homebrew lands on the manifold edge, not on a random leaf.</li>
+      <li>The constraints are also the <strong>OOD story</strong>: beyond the data, trees can only flatten in the safe direction — never invert.</li>
     </ul>
     <div style="display:grid;gap:1em">
       <div class="card"><span class="title">Serving pipeline</span>FeatureEngineer → Imputer → XGBoost → <b>Platt calibration</b>. One pickle; the feature math travels with the model.</div>
@@ -458,11 +479,13 @@
   </div>
   <div class="cols even" style="margin-top:1em;flex:1">
     <ul>
-      <li>Encounters in one campaign share party, DM, house rules ⇒ random splits leak. <strong>StratifiedGroupKFold</strong> everywhere.</li>
-      <li>The grouped-CV vs naive-split gap <em>is</em> the leakage — we report it instead of hiding it.</li>
-      <li>AUC ≈ 0.66 is <strong>honest, not weak</strong>: dice, tactics and unrecorded items are irreducible noise, and the base rate is 83%.</li>
+      <li>Encounters in one campaign share party, DM, house rules ⇒ random splits leak. <strong>StratifiedGroupKFold</strong> everywhere — the split key is the campaign log, all 1,462 of them.</li>
+      <li><strong>Even calibration is grouped</strong>: the Platt folds use precomputed campaign-aware splits, so the base model and its calibrator never peek at the same table.</li>
+      <li>Grouped CV says <strong>0.601 ± 0.040</strong>; the grouped holdout says 0.657. The gap between grouped and naive numbers <em>is</em> the leakage — reported, not shipped.</li>
+      <li>CIs by <strong>percentile bootstrap</strong>: 2,000 resamples of the 7,106 held-out encounters, degenerate resamples skipped.</li>
+      <li>AUC ≈ 0.66 is <strong>honest, not weak</strong>: dice, tactics and unrecorded magic items are irreducible noise — and a blind “party always wins” baseline is already right 83% of the time.</li>
     </ul>
-    <figure class="card"><img src="../figures/calibration_curve.png" alt="calibration"><figcaption>Predicted vs observed win frequency, held-out campaigns.</figcaption></figure>
+    <figure class="card" style="align-self:start"><img src="../figures/calibration_curve.png" alt="calibration" style="max-height:42vh"><figcaption>Predicted vs observed win frequency, held-out campaigns — the curve hugs the diagonal where the data mass lives (0.8–0.9), mild overconfidence in the lowest bins.</figcaption></figure>
   </div>
 </section>
 
@@ -544,10 +567,10 @@
 
 <section class="slide" data-part="Act IV — Guards & simulation">
   <h2>Three guards between the model and the user</h2>
-  <ol style="font-size:1.05em">
-    <li><strong>Shape priors + clipping</strong> — monotone constraints, legal-range inputs: absurd homebrew degrades gracefully.</li>
-    <li><strong>Roster dominance</strong> — averages dilute (Lich + 6 goblins “looks easier” than the Lich alone): score every homogeneous sub-roster, keep the <strong>minimum</strong>. Adding monsters can never help the party.</li>
-    <li><strong>Survival physics cap</strong> — P(win) ≤ σ(a·TTK + b), TTK = deterministic rounds-to-kill-the-party. Anchored by judgment on day one…</li>
+  <ol style="font-size:1.06em;gap:1em">
+    <li><strong>Shape priors + clipping</strong> — 45 monotone constraints and legal-range clipping: absurd homebrew degrades gracefully. Caught in testing: a 10,000-HP, AC-50, DPR-999 monster → clean <em>beyond deadly</em> through the real app flow, no crash, no nonsense.</li>
+    <li><strong>Roster dominance</strong> — count-weighted averages dilute: Lich + 2 Ogres + 6 Goblins has <b>avg CR 2.94</b> while the Lich alone is CR 21, so the raw model rated the <em>bigger</em> fight easier (level 3.25 vs 5.0). Fix: score every homogeneous sub-roster and keep the <strong>minimum</strong> P(win) — adding monsters can never help the party. Axiom, not heuristic.</li>
+    <li><strong>Survival physics cap</strong> — P(win) ≤ σ(a·TTK + b), TTK = deterministic rounds-to-kill-the-party from the same feature math the model trains on: smooth, monotone in level, decreasing in roster damage, so binary search and dominance both survive. Anchored by judgment on day one to 10% / 50% / 90% at 1 / 2 / 3 rounds…</li>
   </ol>
   <div class="card" style="margin-top:1em;text-align:center;font-size:1.05em">
     …and a hand-tuned constant is a confession. So we bought <b>490,640 simulated battles</b> and made the simulator set it.
@@ -559,6 +582,10 @@
     <span class="readout">4× → 12.75</span>
     <span class="readout" style="color:#ff9b9b">8+× → ☠️ beyond deadly</span>
     <span class="muted">— monotone, dominance-safe, pinned by 61 tests + 13 axioms</span>
+  </div>
+  <div class="cols even" style="margin-top:1em;flex:0 0 auto">
+    <div class="card"><span class="title">Why guards, not more data</span>Each guard blocks a failure that <b>no amount of the same data can fix</b>: extrapolation (no data exists out there), aggregation dilution (an artifact of our own featurization), and estimand mismatch (the logs answer a different question). Diagnosis first, then the right tool.</div>
+    <div class="card"><span class="title">Order of application</span>Clipping happens <b>inside the feature transformer</b> (so training and serving agree) → the model predicts → dominance takes the minimum over sub-rosters → the physics cap clamps the result. Deterministic, testable, and visible in <code>predict_win_for_parties()</code>.</div>
   </div>
 </section>
 
@@ -602,7 +629,15 @@
         <li>The gap <strong>crosses over</strong>: ≈ <b>+0.32</b> above the diagonal on hard fights (mercy inflation), ≈ <b>−0.14</b> below on easy ones (the 83% ceiling).</li>
         <li>Bonus: real curated encounters are overwhelmingly deathmatch-easy — table danger is attrition, not hopeless matchups.</li>
       </ul>
-      <p class="muted" style="margin-top:.6em">Few hard cells → +0.32 is directional. OOD grid: extremes agree (HP×20 → P ≈ 0), mid ranking moderate (ρ = 0.54).</p>
+      <div class="card" style="margin-top:.8em"><span class="title">How to read the plot</span>
+        <div style="font-size:.85em;display:grid;gap:.3em">
+          <span>· each dot = one encounter fought <b>2,000 times</b> to the death (SE ≤ 0.011)</span>
+          <span>· diagonal = perfect agreement · color = monster CR (0 → 10)</span>
+          <span>· above the line = our model is <b>kinder</b> than physics (mercy)</span>
+          <span>· below = the 83% ceiling drags easy fights down (retreats, noisy labels)</span>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:.6em">Few hard cells → +0.32 is directional, stated as such. Companion OOD grid (24 cells): extremes agree perfectly — HP×20 clones win ≈ 0.000–0.003 of deathmatches, matching our <em>beyond deadly</em> — while fine mid-range ordering is only moderate (Spearman ρ = 0.54): verdicts validated, micro-ranking beyond either system's resolution.</p>
     </div>
     <div class="widget" style="padding:.6em"><svg id="mercyChart" viewBox="0 0 460 320" style="width:100%;height:100%"></svg></div>
   </div>
@@ -625,7 +660,15 @@
       </ul>
     </div>
     <div style="display:grid;gap:1em">
-      <div class="card" style="text-align:center"><span class="title">Try it during questions</span><code style="font-size:1.1em">dnd-appraising.streamlit.app</code></div>
+      <div class="card" style="text-align:center"><span class="title">Try it during questions</span><code style="font-size:1.05em">dnd-appraising.streamlit.app</code><div style="font-size:.75em;color:#6d5c46;margin-top:.3em">auto-deploys from <code style="font-size:1em">main</code> — what you see is this repo's HEAD</div></div>
+      <div class="card"><span class="title">Every appraisal shows</span>
+        <div style="font-size:.85em;display:grid;gap:.25em">
+          <span>· three verdicts: 📖 book CR (DMG math) · ⚡ True Lethality Level <i>+ win% at it</i> · P(win) @ 1→20</span>
+          <span>· win curves for all 5 compositions · party-size × level heatmap</span>
+          <span>· fairest-matchups table with the official DMG tier per row</span>
+          <span>· threat flags: 👑 legendary · 🪽 flyer · 🛡️ magic res · ⚔️ physical res · 🐺 pack tactics · 💥 nova</span>
+        </div>
+      </div>
       <div class="card"><span class="title">Live demo script (60 seconds)</span>
         <div style="font-size:.9em;display:grid;gap:.3em">
           <span>1 · Lich × 19 → <b>☠️ beyond deadly</b> (the bug that started Act IV, fixed)</span>
