@@ -41,6 +41,9 @@ battlecast:  ## Battlecast deathmatch grid (~15 min) + guard/mercy analysis
 slides:  ## Build the exam deck (presentation/slides.pdf); HTML twin needs no build
 	cd presentation && pdflatex -interaction=nonstopmode slides.tex >/dev/null && pdflatex -interaction=nonstopmode slides.tex | tail -2
 
+report:  ## Build the written report (presentation/report.pdf)
+	cd presentation && pdflatex -interaction=nonstopmode report.tex >/dev/null && pdflatex -interaction=nonstopmode report.tex | tail -1
+
 present-data:  ## Regenerate real-model data for the interactive deck
 	$(PY) presentation/make_interactive_data.py
 
