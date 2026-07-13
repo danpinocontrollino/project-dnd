@@ -1,11 +1,9 @@
-"""Regression tests for the survivability physics guard.
+"""Tests for the survival cap in lethality_engine.
 
-The FIREBALL logs are contaminated by DM mercy: hopeless fights were still
-"won" 84.5% of the time at real tables, so the raw model rated 19 Liches as
-beatable by a level-8 party.  ``lethality_engine._survival_cap`` fixes this
-by capping P(win) with a sigmoid of ``rounds_to_kill_party``.  These tests
-pin the cap's anchor points and its monotonicity properties — they need no
-trained model, only the deterministic feature math.
+Context: the logs record hopeless fights as "won" 84.5% of the time (DM
+mercy), which is how the model ended up rating 19 liches as beatable at
+level 8. The cap fixes that. These tests pin its anchor points and
+monotonicity; no trained model needed, just the feature math.
 """
 
 import numpy as np

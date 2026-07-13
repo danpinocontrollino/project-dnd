@@ -1,19 +1,16 @@
-// Battlecast research grid — headless Monte Carlo collection.
+// Headless driver for the vendored Battlecast engine (see PROVENANCE.md).
+// Runs three grids and appends one JSON line per cell to results.jsonl:
 //
-// Drives the vendored Battlecast combat engine (see PROVENANCE.md) through
-// three designed grids and writes one JSON line per cell to results.jsonl:
+//   guard - boss CR x count x level. Fight-to-the-death outcomes for the
+//           region where the FIREBALL data is polluted by DM mercy; used
+//           to fit the survival cap.
+//   mercy - single SRD monsters x levels, to compare against the model's
+//           table-reality predictions and measure the mercy gap.
+//   ood   - HP/AC-scaled monster clones, to check our out-of-distribution
+//           verdicts against the simulator.
 //
-//   1. guard  — boss CR × count × party level: fight-to-the-death truth for
-//               calibrating the survival-physics guard (the region where
-//               FIREBALL data is DM-mercy-contaminated);
-//   2. mercy  — single SRD monsters × party levels: paired with the
-//               production model's predictions to measure the "DM mercy"
-//               gap (table reality vs deathmatch);
-//   3. ood    — HP/AC-scaled clones of real monsters: does the engine agree
-//               with our out-of-distribution verdicts?
-//
-// Usage:  node run_grid.mjs [--trials 2000] [--smoke]
-//         (--smoke runs 3 cells x 200 trials, for CI-style checks)
+// Usage: node run_grid.mjs [--trials 2000] [--smoke]
+//        --smoke = 3 cells x 200 trials, just to see that it runs
 
 import { appendFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";

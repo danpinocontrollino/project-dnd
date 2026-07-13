@@ -1,23 +1,15 @@
-"""True Lethality Engine — training pipeline.
+"""Training pipeline for the win-probability model.
 
-Reads ``clean_aggregated_combat_data.csv`` (produced by ``parse_fireball.py``),
-engineers D&D combat-math features inside a serializable sklearn transformer,
-tunes an XGBoost classifier with Optuna under group-aware cross-validation,
-calibrates its probabilities, and exports the whole pipeline as
-``true_lethality_model.pkl``.
+Reads clean_aggregated_combat_data.csv (from parse_fireball.py), builds the
+combat-math features inside a sklearn transformer, tunes XGBoost with Optuna,
+calibrates the probabilities and dumps everything as true_lethality_model.pkl.
 
-Design notes
-------------
-* **Group-aware validation.** Encounters from the same campaign log share a
-  party, a DM, and house rules.  Random splits leak this; we split by source
-  file via ``StratifiedGroupKFold`` / ``GroupShuffleSplit``.
-* **Calibration.** The product decision ("which party level gives a 65% win
-  rate?") consumes raw probabilities, so the serving model is wrapped in
-  isotonic ``CalibratedClassifierCV``.  A twin uncalibrated XGBoost is fitted
-  on the same features for interpretation (gain importance + native SHAP).
-* **OOD hardening.** Inputs are clipped to sane 5e bands inside the
-  transformer, and monotone constraints force sensible extrapolation for
-  absurd homebrew (10,000 HP can only ever lower the win probability).
+Three things matter here and I don't want them lost in a refactor:
+- validation is grouped BY CAMPAIGN (same campaign = same party/DM/house
+  rules; random splits leak and the numbers become fantasy);
+- calibration is not optional, the whole app consumes raw probabilities;
+- inputs get clipped and the trees are monotonicity-constrained, so crazy
+  homebrew (10k HP) can only push the prediction the sensible way.
 """
 
 from __future__ import annotations
@@ -265,18 +257,14 @@ def _party_hp_per_member(level: pd.Series) -> pd.Series:
 
 
 class DnDFeatureEngineer(BaseEstimator, TransformerMixin):
-    """Converts raw encounter rows into the engineered feature matrix.
+    """Raw encounter rows -> engineered feature matrix.
 
-    Serialized inside the pipeline .pkl so inference callers pass raw
-    columns and never re-implement feature math.
+    Lives inside the pipeline pickle, so whoever calls predict just passes
+    raw columns and the feature math always matches training.
 
-    Parameters
-    ----------
-    power_exponent : float
-        Exponent of the True Party Power curve (spell/feature scaling is
-        super-linear in level).
-    output_columns : tuple of str
-        Ordered output feature names — must match the downstream model.
+    power_exponent: exponent of the party power curve (levels scale
+    super-linearly, spells etc). output_columns must match what the model
+    downstream was trained on.
     """
 
     def __init__(
@@ -359,7 +347,7 @@ class DnDFeatureEngineer(BaseEstimator, TransformerMixin):
 
     @staticmethod
     def _clip_ood(out: pd.DataFrame) -> pd.DataFrame:
-        """Adversarial homebrew hardening: clip every raw input to legal 5e
+        """Clip every raw input to a legal 5e range, so weird homebrew
         bands so a 10,000 HP / AC 3 monster lands on the model's trained
         manifold edge instead of an arbitrary tree leaf."""
         bounds = {
@@ -507,7 +495,7 @@ class DnDFeatureEngineer(BaseEstimator, TransformerMixin):
         out["rounds_to_kill_party"] = (
             party_hp / monster_effective_dpr.replace(0, np.nan)
         ).clip(upper=50)
-        # >0 means the party wins the damage race; the single most important
+        # >0 means the party wins the damage race - probably the most useful
         # quantity in 5e combat.  Log keeps it symmetric around 0.
         out["lethality_log_ratio"] = np.log(
             out["rounds_to_kill_party"]
@@ -725,33 +713,24 @@ def build_model(
     calibration_cv: Any = 3,
     scale_pos_weight: float = 1.0,
 ) -> Pipeline:
-    """Self-contained pipeline: FeatureEngineer -> Imputer [-> Scaler] -> clf.
+    """Build the full pipeline: FeatureEngineer -> Imputer [-> Scaler] -> clf.
 
-    ``model_type`` selects the learner:
+    model_type picks the learner. "xgb" is what we ship. "logistic" is kept
+    because it actually beats xgb on grouped-CV AUC (0.657 vs 0.614)... and
+    still can't be used: with no constraints it soaks up the confounding in
+    the logs (big groups of monsters are usually weak mobs that parties
+    beat, so the monster-count coefficient comes out positive) and it rated
+    8 liches as trivial. The app asks "what if there were MORE monsters",
+    not "what did tables like this usually face", so we pay ~0.04 AUC for
+    the constrained model. See figures/course_benchmark.json.
 
-    * ``"xgb"`` (production) — monotone-constrained XGBoost.
-    * ``"logistic"`` — l2-penalized logistic regression.  It *wins on
-      observational predictive risk* under campaign-grouped CV (AUC 0.657
-      vs 0.614) — but it is NOT the production model, deliberately: the app
-      asks *interventional* questions ("same monster, more of them"), and
-      the unconstrained linear fit absorbs DM-curation confounding (in real
-      logs, many-monster fights are weak mobs that parties beat, so the
-      monster-count coefficient comes out POSITIVE).  Behaviorally it rated
-      8 Liches as trivial and a 10,000-HP monster as beatable.  XGBoost's
-      monotone constraints encode the domain priors that make those
-      counterfactual sweeps sane — we accept a small AUC penalty for
-      decision-grade behavior.  (Full story: figures/course_benchmark.json
-      and the README's course-concept section.)
+    Calibration is Platt. Tried isotonic first: its step function made
+    1 lich and 2 liches land on the same level in the binary search, and it
+    scored slightly worse anyway.
 
-    Calibration is sigmoid (Platt): isotonic's piecewise-constant map
-    collapsed the win-rate binary search onto plateau edges (1 Lich and
-    2 Liches appraised identically) and measured slightly worse.
-
-    ``calibration_cv`` defaults to 3 random stratified folds, but callers
-    with group structure should pass precomputed grouped splits (a list of
-    (train_idx, test_idx) pairs) so the calibration folds don't leak
-    campaigns — the pipeline preserves row order, so raw-X indices remain
-    valid on the transformed matrix the calibrator sees.
+    calibration_cv: pass precomputed grouped splits here or the calibrator
+    leaks campaigns (row order survives the pipeline, so raw-X indices stay
+    valid on the transformed matrix).
     """
     steps = [
         (
@@ -800,17 +779,11 @@ def tune_hyperparameters(
     n_splits: int = 4,
     storage_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Optuna search over XGBoost hyperparameters with group-aware CV.
+    """Optuna over the XGBoost params, scored by grouped-CV ROC-AUC.
 
-    The objective is mean ROC-AUC under StratifiedGroupKFold, so a
-    configuration only scores well if it generalizes to *unseen campaigns*
-    — the strongest available guard against fitting log noise.
-
-    When ``storage_dir`` is given, the study is persisted to
-    ``<storage_dir>/optuna_study.db`` (SQLite) and *resumed* on the next
-    run — every trial ever attempted stays queryable
-    (``optuna.load_study(...)``), so the search history is an experiment
-    record rather than something that evaporates with the process.
+    Grouped objective on purpose: a config only wins if it generalizes to
+    campaigns it never saw. With storage_dir set the study goes into a
+    sqlite file and resumes across runs, so no trial ever gets lost.
     """
     import optuna
 
@@ -895,8 +868,8 @@ def plot_feature_importances(
 def compute_native_shap(
     model: xgb.XGBClassifier, X_transformed: pd.DataFrame
 ) -> pd.DataFrame:
-    """Exact TreeSHAP values via XGBoost's built-in pred_contribs — no shap
-    package required.  Returns a DataFrame of per-row contributions."""
+    """TreeSHAP through xgboost's own pred_contribs (the shap package has no
+    py3.14 wheel yet). One row of contributions per sample."""
     booster = model.get_booster()
     dmat = xgb.DMatrix(X_transformed, feature_names=list(X_transformed.columns))
     contribs = booster.predict(dmat, pred_contribs=True)
@@ -1104,7 +1077,7 @@ def plot_logistic_coefficients(
 def _bootstrap_ci(
     y_true, y_prob, metric_fn, n_boot: int = 2000, seed: int = 42
 ) -> Tuple[float, float]:
-    """Percentile-bootstrap 95% CI for a probability metric on the holdout.
+    """95% percentile-bootstrap CI for a metric on the holdout.
 
     Resamples (y, p) pairs with replacement; degenerate resamples (a single
     class, where AUC is undefined) are skipped.  2,000 resamples keeps the
@@ -1125,7 +1098,7 @@ def _bootstrap_ci(
 
 
 def _append_experiment_record(figures_dir: str, metrics: Dict[str, Any]) -> None:
-    """Append this run to figures/experiments.jsonl (append-only history).
+    """Log this run to figures/experiments.jsonl and never overwrite it.
 
     ``metrics.json`` always reflects the *latest* run and gets overwritten;
     this log never does, so every training run remains comparable after the
@@ -1288,8 +1261,8 @@ def run_training(
     interp.fit(Xt_train.fillna(Xt_train.median()), y_train)
 
     # Version-portable fallback artifact: joblib pickles break across XGBoost
-    # versions, the native JSON format does not.  (Uncalibrated twin — the
-    # calibrated pipeline remains the serving model.)
+    # versions, the native JSON format doesn't. This is the uncalibrated
+    # twin; the calibrated pipeline stays the one we actually serve.
     interp.get_booster().save_model(
         os.path.splitext(model_output)[0] + "_uncalibrated_xgb.json"
     )
@@ -1348,7 +1321,7 @@ CR_PREDICTOR_FEATURES: Tuple[str, ...] = (
 
 
 def parse_cr_value(raw: Any) -> float:
-    """Safe CR parser handling fractions ('1/4') — replaces eval()."""
+    """CR string to float, fractions included. (The old code used eval here...)"""
     s = str(raw).strip()
     m = re.match(r"^(\d+)\s*/\s*(\d+)$", s)
     if m:

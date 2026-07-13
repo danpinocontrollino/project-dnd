@@ -1,17 +1,17 @@
-"""Precompute REAL model predictions for the interactive exam deck.
+"""Precompute the model outputs embedded in the interactive slide deck.
 
-Writes presentation/interactive_data.json, consumed by slides_interactive.html:
+Writes presentation/interactive_data.json and inlines the same JSON into
+slides_interactive.html (Safari blocks fetch on file://, so the deck has to
+carry its data inside). Contents:
 
-  lich    — P(win) grid for the Lich Lab widget: count 1..19 x party level
-            1..20, produced by the PRODUCTION inference path
-            (predict_win_for_parties: calibrated model + dominance guard +
-            survival guard) — the live demo shows the real pipeline.
-  guard   — (TTK, p_sim) points of the 180-cell Battlecast guard grid.
-  mercy   — (p_sim, p_model, CR) triples of the 100-cell mercy grid.
-  shap    — top-10 mean |SHAP| features from figures/shap_ranking.csv.
-  guard_ab / guard_old — calibrated vs original hand-tuned guard constants.
+  lich      P(win) for 1..19 liches x party level 1..20, computed through
+            the real serving path (guards included) - the demo is not a mock
+  guard     (TTK, p_sim) points from the Battlecast guard grid
+  mercy     (p_sim, p_model, CR) triples from the mercy grid
+  shap      top-10 features from figures/shap_ranking.csv
+  guard_ab / guard_old   calibrated vs original guard constants
 
-Run:  make present-data   (or  python3 presentation/make_interactive_data.py)
+Run: make present-data
 """
 
 from __future__ import annotations

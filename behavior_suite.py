@@ -1,13 +1,11 @@
-"""Behavioral acceptance suite for the True Lethality Engine.
+"""Sanity checks the deployed model has to pass. Run after ANY model change:
 
-Run after ANY model change:  python3 behavior_suite.py
+    python3 behavior_suite.py
 
-Predictive risk (AUC/Brier) is necessary but not sufficient — the app asks
-*interventional* questions (same monster, more of them; same roster, higher
-level), and a model can win on observational metrics while answering those
-questions absurdly (the unconstrained ridge logistic rated 8 Liches as
-trivial).  Every check below encodes a domain axiom the deployed model must
-satisfy.  Exits non-zero on any failure.
+Good AUC is not enough - we had a logistic model that beat xgb on AUC and
+then rated 8 liches as a trivial fight. The app asks what-if questions
+(more monsters, higher level), so each check below is a rule of the game
+the model can't be allowed to break. Non-zero exit if anything fails.
 """
 
 from __future__ import annotations
@@ -183,7 +181,7 @@ def main() -> int:
     if FAILURES:
         print(f"❌ {len(FAILURES)} check(s) FAILED: {FAILURES}")
         return 1
-    print("✅ All behavioral checks passed — model is decision-grade.")
+    print("✅ All behavioral checks passed.")
     return 0
 
 

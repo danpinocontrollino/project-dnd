@@ -1,14 +1,12 @@
-"""Shared inference engine for the True Lethality app and CLI.
+"""Inference core shared by the web app and the CLI.
 
-Single source of truth for:
-* building fully-specified raw input rows (including offensive stats),
-* the binary search for the party level that yields the target win rate,
-* the party-grid simulation ("Monte Carlo" sweep of compositions),
-* the win-probability curve across party levels.
+Everything that turns a monster (or roster) + party config into predictions
+lives here: building the raw input rows, the binary search for the "fair"
+party level, the party sweep, the win curves, and the domain guards.
 
-Both ``app.py`` and ``fair_fight_finder.py`` import from here — the two
-previously carried diverging copies of this logic (the CLI's simulation had
-already lost its ``num_monsters`` field to copy-paste drift).
+app.py and fair_fight_finder.py must import from here and never duplicate
+this logic. We learned that the hard way: the two used to carry their own
+copies and the CLI silently lost the num_monsters field at some point.
 """
 
 from __future__ import annotations
@@ -244,32 +242,26 @@ def predict_win_probability(pipe, rows: List[Dict[str, float]]) -> np.ndarray:
     return pipe.predict_proba(df[list(RAW_INPUT_COLUMNS)])[:, 1]
 
 
-# ── Survivability physics guard ─────────────────────────────────────────────
-# The FIREBALL logs are contaminated by DM mercy exactly where the model
-# needs data most: fights the damage math says are hopeless (party deleted
-# in <=1 round) were still "won" 84.5% of the time at real tables — fudged
-# rolls, retreats, reinforcements.  No model trained on that data can answer
-# the app's counterfactual ("fight 19 Liches TO THE DEATH"), so an explicit
-# physics layer caps P(win) by the party's survivability:
+# --- survival cap ---
+# The logs lie exactly where it matters: fights that the damage math says
+# are hopeless (party wiped in <=1 round) still show up as "won" 84.5% of
+# the time, because DMs fudge, players run, reinforcements arrive. A model
+# trained on that can't answer "what if we fight 19 liches to the death",
+# so I cap P(win) with sigmoid(A * rounds_to_kill_party + B).
 #
-#     cap = sigmoid(A * rounds_to_kill_party + B)
-#
-# The constants are CALIBRATED AGAINST DEATHMATCH SIMULATION, not hand-tuned:
-# logistic fit of P(win) on rounds_to_kill_party over the 180-cell Battlecast
-# guard grid (boss CR {5,10,15,21} x count {1..19} x party level {1..20},
-# 2,000 Monte Carlo trials per cell, battlecast.gg engine — see
-# battlecast_bridge/PROVENANCE.md and figures/battlecast_guard_fit.png).
-# Fitted caps: rtk=1 -> 0.09, rtk=2 -> 0.33, rtk=3 -> 0.71, rtk=4 -> 0.93;
-# non-binding above rtk ~ 3.7 (the model's own ceiling takes over), so all
-# in-distribution predictions and engine monotonicity guarantees survive.
-# The original hand-tuned anchors (A=2.197, B=-4.394: 0.10/0.50/0.90 at
-# rtk 1/2/3) turned out slightly too generous in the 2-3 round zone.
-_GUARD_A = 1.6302  # slope of logistic fit on simulated deathmatch outcomes
+# A and B are NOT hand picked: logistic fit on the 180-cell Battlecast grid
+# (boss CR {2,5,10,15,21} x count {1..19} x level {1..20}, 2000 trials per
+# cell - see battlecast_bridge/ and figures/battlecast_guard_fit.png).
+# Caps: 1 round of survival -> 9%, 2 -> 33%, 3 -> 71%, 4 -> 93%; basically
+# inactive above ~3.7 rounds, i.e. everywhere the training data is fine.
+# My first hand-tuned guess (2.197, -4.394 = 10/50/90%) was too generous
+# in the 2-3 round zone.
+_GUARD_A = 1.6302
 _GUARD_B = -3.9771
 
 
 def _survival_cap(rows: List[Dict[str, float]]) -> np.ndarray:
-    """Physics ceiling on P(win) from the deterministic damage race."""
+    """Cap on P(win) from the deterministic damage race (see above)."""
     from initial_learn import DnDFeatureEngineer, FEATURE_COLUMNS
 
     feats = DnDFeatureEngineer(1.5, FEATURE_COLUMNS).transform(pd.DataFrame(rows))
@@ -283,17 +275,14 @@ def predict_win_for_parties(
     party_configs: List[Dict[str, float]],
     num_monsters: int = 1,
 ) -> np.ndarray:
-    """P(win) for each party config, with two domain constraints applied.
+    """P(win) per party config, with the two domain guards applied.
 
-    1. **Roster dominance** — for mixed rosters the count-weighted averages
-       can *dilute*: a Lich plus six goblins has a lower avg CR/DPR than the
-       Lich alone, and the model may rate the bigger fight easier.  Adding
-       monsters can never make an encounter easier, so every homogeneous
-       sub-roster is also scored and the elementwise minimum wins.
-    2. **Survivability physics** — the model saturates near the empirical
-       win-rate ceiling even for mathematically hopeless fights (see
-       ``_survival_cap``); P(win) is capped by the damage-race sigmoid so
-       19 Liches read as the TPK they are instead of "level 8".
+    1. Dominance: on mixed rosters the weighted averages dilute (lich + six
+       goblins has lower avg CR than the lich alone, and the model would
+       call the bigger fight easier). So score every homogeneous sub-roster
+       too and take the elementwise min - more monsters can't help you.
+    2. Survival cap: without it the model stays near the 83% ceiling even
+       for hopeless fights (the 19-liches-at-level-8 bug).
     """
     roster = _normalize_roster(monster, num_monsters)
     variants: List[List[Tuple[MonsterProfile, int]]] = [list(roster)]

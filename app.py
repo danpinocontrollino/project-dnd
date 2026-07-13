@@ -1,8 +1,9 @@
-"""True Lethality Engine — Streamlit interface.
+"""Streamlit front end.
 
-Loads the calibrated pipeline + CR predictor, and for any official or
-homebrew monster finds the party level with a 65% predicted win rate,
-sweeps 400 hypothetical parties, and plots the win-probability curves.
+Loads the calibrated pipeline + the CR predictor; for any monster (official
+or homebrew) it finds the party level that hits the target win rate, sweeps
+400 hypothetical parties and plots the curves. No model logic in here -
+that all comes from lethality_engine.
 """
 
 import json

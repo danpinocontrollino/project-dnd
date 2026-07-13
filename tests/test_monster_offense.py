@@ -1,7 +1,7 @@
-"""Unit tests for monster_offense.py — statblock parsing and DMG tables.
+"""Tests for the statblock parsing and DMG tables in monster_offense.py.
 
-The versatile-weapon test pins the bug fixed in July 2026: "7 (1d8+3)
-slashing damage, or 8 (1d10+3) ... two hands" was summed to DPR 15.
+The versatile-weapon test is there because we shipped that bug once:
+"7 (1d8+3) slashing damage, or 8 (1d10+3) ... two hands" got summed to 15.
 """
 
 import numpy as np

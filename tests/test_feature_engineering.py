@@ -1,4 +1,4 @@
-"""Unit tests for the DnDFeatureEngineer and the shared inference engine."""
+"""Tests for DnDFeatureEngineer and the roster/engine helpers."""
 
 import numpy as np
 import pandas as pd

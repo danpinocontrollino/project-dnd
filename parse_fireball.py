@@ -17,12 +17,12 @@ from monster_offense import build_offense_table, cr_to_xp, extract_official_trai
 
 LOGGER = logging.getLogger(__name__)
 
-# Sanity caps for noisy real-play logs (FIREBALL contains epic-level homebrew
-# and mis-parsed sheets; official play tops out at level 20 / ~30 combatants).
+# FIREBALL is full of junk: homebrew above level 20, mis-parsed sheets,
+# mass-summon fights with 200+ tokens. Cap everything to the legal range.
 MAX_PARTY_LEVEL = 20.0
 MAX_MONSTERS = 30
 
-# Twelve PHB-style classes we tally (substring match on lowercased class field).
+# The 12 base classes. Substring match on the lowercased class field.
 CORE_CLASSES: Tuple[str, ...] = (
     "barbarian",
     "bard",
@@ -102,11 +102,9 @@ def safe_float(raw: Any) -> Optional[float]:
 
 
 def extract_total_pc_level(class_str: Optional[str]) -> int:
-    """
-    Sum all integer level tokens in a multiclass string (e.g. ``Fighter 3 / Rogue 2`` -> 5).
+    """Sum every integer in a multiclass string, e.g. 'Fighter 3 / Rogue 2' -> 5.
 
-    This follows the aggregate rule used in course materials: any digit group
-    contributes to total character level.
+    Any digit group counts toward total character level.
     """
     if not class_str:
         return 0
@@ -115,10 +113,10 @@ def extract_total_pc_level(class_str: Optional[str]) -> int:
 
 
 def is_dead(hp_str: Optional[str]) -> bool:
-    """
-    Infer dead/down from Avrae-style HP strings.
+    """Guess dead/down from an Avrae HP string.
 
-    Heuristic by design: logs are noisy; false negatives bias toward ``Ongoing``.
+    It's a heuristic - the logs are messy - and I let it miss rather than
+    over-fire, so unsure cases fall through to 'Ongoing'.
     """
     if not hp_str:
         return False
@@ -136,11 +134,10 @@ def infer_turn_outcome(
     pcs: Sequence[Mapping[str, Any]],
     monsters: Sequence[Mapping[str, Any]],
 ) -> str:
-    """
-    Map terminal HP patterns to a coarse four-way label for the snapshot.
+    """Four-way label for a snapshot from who's dead.
 
-    ``Ongoing`` rows are dropped before modeling so the classifier trains only on
-    resolved fights (reduces label noise from mid-combat frames).
+    'Ongoing' snapshots get dropped later - training only on resolved fights
+    keeps the labels clean.
     """
     party_casualty = any(is_dead(pc.get("hp")) for pc in pcs)
     dead_monsters = [m for m in monsters if is_dead(m.get("hp"))]
@@ -170,11 +167,10 @@ def count_core_classes(pcs: Sequence[Mapping[str, Any]]) -> Dict[str, int]:
 
 
 def make_encounter_id(data: Mapping[str, Any], file_path: str, line_idx: int) -> str:
-    """
-    Stable key for grouping turns into an encounter.
+    """Stable key to group turns into one encounter.
 
-    Prefer ``combat_id`` when the upstream extract provides it; otherwise fall back
-    to ``{jsonl_basename}_{before_state_idx}`` per FIREBALL companion scripts.
+    Use combat_id if the log has it, otherwise fall back to
+    '{jsonl_basename}_{before_state_idx}'.
     """
     explicit = data.get("combat_id")
     if explicit is not None and str(explicit).strip():
@@ -203,7 +199,7 @@ def final_outcome_from_series(outcomes: Iterable[str]) -> str:
 
 
 def summarize_monster_names(nested: Iterable[Iterable[str]]) -> str:
-    """Human-readable ``1x ogre, 2x bandit`` summary for professor-facing tables."""
+    """Readable '1x ogre, 2x bandit' string for the summary tables."""
     flat: List[str] = [m for sub in nested for m in sub]
     if not flat:
         return ""
@@ -224,11 +220,10 @@ def unique_preserve_order(values: Iterable[str]) -> List[str]:
 def build_monster_frame(
     monsters_csv: str,
 ) -> Tuple[pd.DataFrame, Dict[str, Dict[str, Any]]]:
-    """
-    Load ``dnd_monsters.csv`` and return (annotated DataFrame, dict index).
+    """Load dnd_monsters.csv, return (annotated DataFrame, dict index).
 
-    The DataFrame carries parsed numeric CR/HP/AC for vectorized joins; the dict
-    mirrors legacy code paths for optional debugging.
+    DataFrame has numeric CR/HP/AC for the joins; the dict is just for
+    poking around when debugging.
     """
     try:
         df_raw = pd.read_csv(monsters_csv)
@@ -247,8 +242,7 @@ def build_monster_frame(
     df_raw["hp_num"] = df_raw["hp"].map(safe_float)
     df_raw["ac_num"] = df_raw["ac"].map(safe_float)
 
-    # ── Monster Trait Extraction (Area 1) ─────────────────────────────────
-    # 1. Base ordinal traits (from dnd_monsters.csv)
+    # Monster traits, part 1: the ordinal ones straight from dnd_monsters.csv
     df_raw["monster_is_legendary"] = (
         df_raw["legendary"].fillna("").str.strip().str.lower().eq("legendary")
     ).astype(int)
@@ -277,11 +271,12 @@ def build_monster_frame(
         df_raw["monster_stat_sum"].median()
     )
 
-    # 2. Deep Mechanical Traits (from Official Stats CSV)
+    # Part 2: the mechanical traits from the Official Stats CSV
     try:
         df_official = pd.read_csv("Monster Spreadsheet (D&D5e) - Official Stats.csv")
 
-        # Fuzzy matching logic to handle "angel, deva", "assorted beast, aurochs", etc.
+        # Names don't line up cleanly ("angel, deva", "assorted beast, aurochs"),
+        # so try a few reorderings of each name as candidate keys.
         def _get_fuzzy_keys(name: str) -> List[str]:
             n = str(name).lower().strip()
             import re
@@ -320,10 +315,9 @@ def build_monster_frame(
             lambda n: _lookup_trait(n, "Additional")
         )
 
-        # Extract 6 binary flags via the canonical shared extractor
-        # (previously this file used regexes that differed from the app's:
-        # no "frightenedimmu" in CC, "magic resistance" vs "magic resist",
-        # no "innate spell" for spellcasting, "regeneration" vs "regenerat").
+        # Go through the shared extractor so these match the app exactly.
+        # This file used to have its own slightly-different regexes and the
+        # CR predictor ended up trained on different definitions - don't.
         traits = extract_official_traits(df_raw["_WRI"], df_raw["_Additional"])
         df_raw["monster_has_physical_res"] = traits["physical_res"]
         df_raw["monster_immune_to_cc"] = traits["cc_immune"]
@@ -353,11 +347,8 @@ def build_monster_frame(
         ]:
             df_raw[col] = 0
 
-    # ── End Monster Trait Extraction ──────────────────────────────────────
-
-    # ── Offensive stats (Attack Potency fix) ──────────────────────────────
-    # Real DPR / attack bonus / save DC parsed from SRD statblocks, with the
-    # DMG p.274 by-CR design table as fallback for non-SRD monsters.
+    # Offense: DPR / attack bonus / save DC from the SRD statblocks, with the
+    # DMG by-CR table filling in whatever isn't in the SRD.
     offense = build_offense_table(
         df_raw[["clean_name", "cr_num"]], output_csv="monster_offense_stats.csv"
     )
@@ -463,8 +454,8 @@ def aggregate_encounters(df_turns: pd.DataFrame) -> pd.DataFrame:
         ),
         "unique_monsters_list": ("monsters_present", agg_monsters),
         "num_monsters": ("monsters_present", lambda s: len(agg_monsters(s))),
-        # Peak simultaneous hostile actors (matched or not) — the real
-        # action-economy signal, robust to bestiary join misses.
+        # Most enemies on the field at once, matched or not. This is the
+        # action-economy number I actually trust - it survives join misses.
         "num_monsters_total": ("monsters_on_field", "max"),
     }
     for col in CLASS_COUNT_COLUMNS:
@@ -478,10 +469,10 @@ def aggregate_encounters(df_turns: pd.DataFrame) -> pd.DataFrame:
 def attach_monster_stats(
     df_encounters: pd.DataFrame, df_monsters: pd.DataFrame
 ) -> pd.DataFrame:
-    """
-    Vectorized relational join: explode unique matched monsters, merge stats, mean.
+    """Explode the matched monsters, join their stats, aggregate per encounter.
 
-    Encounters with zero successful matches yield NaN means (preserved for analysis).
+    Encounters with no matches come out as NaN - I keep them so I can see
+    how many there are.
     """
     core = df_monsters[
         [
@@ -515,23 +506,22 @@ def attach_monster_stats(
         avg_monster_cr=("cr_num", "mean"),
         avg_monster_hp=("hp_num", "mean"),
         avg_monster_ac=("ac_num", "mean"),
-        # Mixed-roster math: the mean CR of (1 dragon + 10 kobolds) says the
-        # fight is trivial.  Max CR captures the apex threat; totals capture
-        # the full damage race (sum over every monster instance).
+        # avg CR lies on mixed rosters: (1 dragon + 10 kobolds) averages out
+        # to something trivial. So also keep max CR (the scary one) and the
+        # totals (HP and XP summed over every monster instance).
         max_monster_cr=("cr_num", "max"),
         total_monster_hp=("hp_num", "sum"),
         total_monster_xp=("monster_xp", "sum"),
-        # Offensive potency (Attack Potency fix)
+        # offense
         avg_monster_dpr=("monster_dpr", "mean"),
         total_monster_dpr=("monster_dpr", "sum"),
         max_monster_atk_bonus=("monster_atk_bonus", "max"),
         max_monster_save_dc=("monster_save_dc", "max"),
-        # Nova threat: the single scariest action any monster in the roster
-        # can take (breath weapon, top damage spell).
+        # the single biggest hit anything in the roster can land (breath
+        # weapon, best damage spell)
         max_monster_burst=("monster_burst", "max"),
-        # New trait aggregations:
-        # Binary flags use max — if ANY monster in the encounter is legendary
-        # or mobile, the encounter inherits that tactical dimension.
+        # flags use max: if ANY monster is legendary/flying/etc., the whole
+        # encounter has to deal with it
         monster_is_legendary=("monster_is_legendary", "max"),
         monster_has_mobility=("monster_has_mobility", "max"),
         monster_has_physical_res=("monster_has_physical_res", "max"),

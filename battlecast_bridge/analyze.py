@@ -1,25 +1,16 @@
-"""Analysis of the Battlecast research grid (see run_grid.mjs).
+"""Analysis of the Battlecast grid produced by run_grid.mjs.
 
-Three questions, three outputs (all under ../figures/):
+Outputs (all in figures/):
+- guard grid: logistic fit of P(win|deathmatch) on rounds-to-kill-party,
+  plotted against the previous hand-tuned guard
+  -> battlecast_guard_fit.png, constants in battlecast_summary.json
+- mercy grid: simulated deathmatch P(win) vs the model's table-reality
+  P(win), cell by cell; the signed gap is the DM-mercy effect
+  -> battlecast_mercy_gap.png
+- ood grid: rank agreement between model verdicts and the simulator
+  -> battlecast_summary.json
 
-1. **Guard calibration** — on the `guard` grid (boss x count x level), fit
-   P(win | deathmatch) as a logistic function of the engine's
-   rounds-to-kill-party estimate, and compare with the hand-tuned
-   survival-physics guard sigma(2.197*ttk - 4.394).
-   -> battlecast_guard_fit.png + fitted constants in battlecast_summary.json
-
-2. **DM-mercy gap** — on the `mercy` grid (single SRD monsters), pair each
-   simulated deathmatch P(win) with the production model's calibrated
-   table-reality P(win) for the same configuration.  The signed gap *is*
-   the mercy/selection effect, now measured cell by cell.
-   -> battlecast_mercy_gap.png
-
-3. **OOD agreement** — on the `ood` grid (HP/AC-scaled clones), check that
-   the model's verdict ordering matches the simulator's.
-   -> rows in battlecast_summary.json
-
-Run AFTER run_grid.mjs:  python3 battlecast_bridge/analyze.py
-(from the repo root, so the model pickle and modules resolve).
+Run from the repo root AFTER run_grid.mjs, so the pickle and imports resolve.
 """
 
 from __future__ import annotations
@@ -48,10 +39,10 @@ from initial_learn import DnDFeatureEngineer, FEATURE_COLUMNS, RAW_INPUT_COLUMNS
 from lethality_engine import _GUARD_A as PRODUCTION_SLOPE
 from lethality_engine import _GUARD_B as PRODUCTION_INTERCEPT
 
-# The ORIGINAL hand-tuned anchors (pre-calibration, 2026-07-09): frozen here
-# as the historical comparison line.  Production constants now live in
-# lethality_engine and are EXPECTED to equal this script's fit — main()
-# verifies that and warns if they drift (e.g. after regenerating the grid).
+# The original hand-tuned guard, kept frozen as the comparison line in the
+# plot. The production constants live in lethality_engine and should equal
+# whatever this script fits; main() warns if they drift apart (e.g. after
+# regenerating the grid).
 HAND_TUNED_SLOPE = 2.197
 HAND_TUNED_INTERCEPT = -4.394
 from lethality_engine import MonsterProfile, encounter_row

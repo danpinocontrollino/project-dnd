@@ -1,30 +1,20 @@
-"""Monster offensive statistics engine.
+"""Offensive stats for monsters: DPR, attack bonus, save DC, burst.
 
-Solves the "Attack Potency" limitation: the official stats CSV carries no
-Damage Per Round (DPR), attack bonus, or spell save DC, forcing the model to
-lean on WotC CR as a proxy for offense.  This module derives real offensive
-stats from two local, license-safe sources:
+The official stats CSV has no offense numbers at all, which forced the model
+to use CR as a proxy for how hard a monster hits. Here we parse the real
+numbers out of the SRD statblock text (srd_5e_monsters.json) and fall back
+to the DMG p.274 "monster statistics by CR" table for everything we can't
+parse. Parsed DPR gets clamped to [0.25x, 3x] of the table value for the
+monster's CR so a bad regex match can't produce garbage.
 
-1. **SRD statblock parsing** — ``srd_5e_monsters.json`` contains the full
-   Actions HTML for 327 SRD monsters.  We regex-extract attack bonuses
-   (``+9 to hit``), printed average damage (``12 (2d6 + 5)``), Multiattack
-   routine counts (``makes three tentacle attacks``), and save DCs
-   (``DC 14``), then estimate DPR as ``n_attacks x mean(per-attack damage)``.
+Main entry points:
+    build_offense_table(...)  -> per-monster table, written to
+                                 monster_offense_stats.csv
+    offense_from_cr(cr)       -> (atk_bonus, dpr, save_dc) from the DMG table
+    attach_offense(df, ...)   -> merge offense columns onto a monster frame
 
-2. **DMG p.274 fallback** — for monsters outside the SRD, we impute the
-   expected offensive profile for their CR from the official "Monster
-   Statistics by Challenge Rating" table (midpoint of the DPR band).
-
-Parsed DPR is clamped to [0.25x, 3x] of the DMG expectation for the
-monster's CR so one regex mishap can't inject a CR-1 monster with DPR 400.
-
-Public API
-----------
-``build_offense_table(...)`` -> DataFrame indexed by clean_name with columns
-    ``atk_bonus, dpr, save_dc, offense_source``
-``offense_from_cr(cr)`` -> (atk_bonus, dpr, save_dc) tuple for any CR
-``attach_offense(df, cr_col, name_col)`` -> merge offense columns onto any
-    monster frame, falling back to the CR table row-by-row.
+Also home to the CR<->XP tables and the encounter multiplier, since every
+other module needs them and this is the lowest-level place they fit.
 """
 
 from __future__ import annotations
@@ -189,11 +179,10 @@ def encounter_xp_multiplier(
     return _XP_MULT_LADDER[max(0, min(idx, len(_XP_MULT_LADDER) - 1))]
 
 
-# ── Canonical deep-trait extraction (single source of truth) ────────────────
-# These six flags were previously extracted in THREE places with slightly
-# different regexes (parse_fireball.py, lethality_engine.py, initial_learn.py)
-# — meaning the CR predictor trained on different trait definitions than the
-# app used at inference.  Every consumer now goes through this table.
+# Deep-trait extraction. Keep this as the ONLY place these regexes live:
+# at some point we had three slightly different copies (parser, engine, CR
+# predictor) and the CR predictor was effectively trained on different trait
+# definitions than the app served. Never again.
 OFFICIAL_TRAIT_REGEX: Dict[str, Tuple[str, str]] = {
     # flag_name: (source column, regex)
     "physical_res": ("wri", r"nonmagicalres|nonmagicalimmu"),
@@ -274,10 +263,9 @@ _ACTION_HEADER_RE = re.compile(
 )
 _SAVE_CONTEXT_RE = re.compile(r"saving\s+throw|succeed\s+on\s+a\s+DC", re.IGNORECASE)
 
-# ── PHB damage-spell table: spell name -> average damage on a hit/failed
-# save at the spell's base casting level.  Used to scan Spellcasting /
-# Innate Spellcasting trait lists, which name spells without printing their
-# damage — this is how a Lich's Power Word Kill enters the burst feature.
+# PHB damage spells, avg damage at base casting level. Spellcasting traits
+# only name the spells, they don't print damage, so without this table a
+# Lich looks harmless (its melee touch is 10 dmg; Power Word Kill is 100).
 SPELL_DAMAGE: Dict[str, float] = {
     "meteor swarm": 140.0,
     "power word kill": 100.0,  # flat 100: kills any creature <= 100 HP
@@ -311,9 +299,8 @@ SPELL_DAMAGE: Dict[str, float] = {
     "moonbeam": 10.5,
 }
 
-# Cap used when converting a one-shot spell into a *sustained* DPR estimate:
-# top-tier novas (Power Word Kill, Meteor Swarm) are once-per-day, so
-# sustained casting looks like repeated fireball-class spells.
+# For sustained DPR, cap spell damage at fireball-class output: the big
+# novas are once per day, you don't get to Meteor Swarm every round.
 _SUSTAINED_SPELL_CAP = 45.0
 
 
@@ -376,17 +363,10 @@ def _split_actions(html: str) -> List[str]:
 
 
 def _damage_values(segment: str) -> List[float]:
-    """Damage expressions in a text block, with alternatives merged.
-
-    Damage riders remain separate entries ("7 slashing plus 3 (1d6) fire"
-    -> [7, 3], summed or averaged by the caller), but damage **alternatives**
-    are collapsed: versatile weapons print "7 (1d8+3) slashing damage,
-    **or** 8 (1d10+3) ... if used with two hands", and the old pooled
-    ``findall`` counted both (DPR 15 instead of 8).  Whenever the text
-    between two damage expressions contains a standalone "or", the later
-    value replaces the earlier via max() instead of appending.
-
-    Returns ``[]`` when the block contains no damage expression at all.
+    """Damage values in a text block. Riders stay separate entries, but
+    "or" alternatives collapse to the max: versatile weapons print
+    "7 (1d8+3) ... or 8 (1d10+3) if used with two hands" and a plain
+    findall would count both (bit us on 24 monsters).
     """
     matches = list(_AVG_DMG_RE.finditer(segment))
     if not matches:
@@ -421,23 +401,16 @@ def parse_statblock_offense(
     traits_html: str = "",
     cr: Optional[float] = None,
 ) -> Optional[Dict[str, float]]:
-    """Extract (atk_bonus, dpr, save_dc, burst_dmg) from raw statblock HTML.
+    """Pull (atk_bonus, dpr, save_dc, burst_dmg) out of statblock HTML.
 
-    Per-action segmentation keeps the estimates honest:
+    Works per action, not on the pooled text. Weapon attacks (segments with
+    "to hit") build sustained DPR = multiattack count * mean damage per
+    action, riders summed within an action. Save-based actions (breath
+    weapons etc.) are kept OUT of the DPR math and become burst candidates
+    instead; pooling everything was overstating dragons by ~60%. Spell
+    lists get scanned against SPELL_DAMAGE for the burst.
 
-    * **Weapon attacks** (segments containing "to hit") feed the sustained
-      DPR: ``multiattack_count x mean(per-action damage sums)``.  Damage
-      riders inside one action ("plus 3 (1d6) fire") are summed together.
-    * **Save-based actions** (breath weapons, gaze attacks) are *excluded*
-      from the multiattack math — the old pooled regex inflated dragons by
-      ~60% — and instead define ``burst_dmg`` (the nova).
-    * **Spell lists** in Traits name spells without printing damage; a PHB
-      damage table maps them (a Lich's Power Word Kill -> burst 100).  For
-      sustained DPR, spell damage is capped at fireball-class output since
-      top novas are once per day.
-
-    DPR is clamped to [0.25x, 3x] of the DMG p.274 expectation for the CR.
-    Returns ``None`` when no offensive information is present at all.
+    Returns None if the block contains no offensive info at all.
     """
     text = _strip_html(actions_html or "")
     if not text.strip() and not (traits_html or "").strip():

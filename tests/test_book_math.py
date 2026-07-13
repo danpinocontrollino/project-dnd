@@ -1,9 +1,8 @@
-"""Regression tests for the by-the-book (DMG p.82) encounter estimate.
+"""Tests for the DMG p.82 encounter estimate.
 
-The book side of the comparison must run the actual DMG procedure — sum the
-monsters' XP, apply the encounter multiplier for the monster count — and
-express the adjusted total as an equivalent single-monster CR.  Previously
-6x CR-1 monsters still displayed "CR 1" on the book column.
+The "by the book" column has to actually run the book's procedure (sum XP,
+apply the count multiplier, convert back to an equivalent CR). Before this
+existed, 6 x CR-1 monsters showed up as "CR 1" in the app.
 """
 
 import pytest

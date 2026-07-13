@@ -1,8 +1,7 @@
-"""Course-aligned model benchmark for the True Lethality Engine.
+"""Benchmarks tying the project back to the course material (SL2026).
 
-Connects the project to the Statistical Machine Learning lecture material
-(P. Brutti, SL2026) by evaluating, under the SAME campaign-grouped
-cross-validation as the production model:
+Everything below runs under the SAME campaign-grouped CV as the production
+model, otherwise the comparison means nothing:
 
 1. **Penalized logistic regression** — ERM with the logistic loss (Lec 04)
    plus an l2/ridge penalty (Lec 05, "penalties, priors and smoothness").
@@ -348,7 +347,7 @@ def gp_cr_predictor(
     xgbr.fit(X_train, y_train)
     y_xgb = xgbr.predict(X_test)
 
-    # Coverage of the GP's 95% predictive interval — the honesty check.
+    # Check the GP's 95% interval actually covers ~95% of the test points.
     lo, hi = y_gp - 1.96 * y_gp_std, y_gp + 1.96 * y_gp_std
     coverage = float(((y_test >= lo) & (y_test <= hi)).mean())
 

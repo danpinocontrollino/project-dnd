@@ -1,7 +1,6 @@
-"""Fair Fight Finder — CLI for the True Lethality Engine.
-
-Interactive terminal twin of the Streamlit app.  All simulation logic lives
-in ``lethality_engine`` so the CLI and web app can never drift apart.
+"""Terminal version of the app, for quick checks without spinning up
+Streamlit. Same rules as app.py: all the actual logic stays in
+lethality_engine, this file only does input/output.
 """
 
 from __future__ import annotations

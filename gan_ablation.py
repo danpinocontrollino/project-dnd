@@ -1,7 +1,7 @@
-"""GAN ablation — does CTGAN class balancing help or hurt?
+"""Does CTGAN class balancing actually help? Spoiler: no.
 
-Answers, with numbers, the question the repository previously left implicit:
-*when and where should gan_balanced_combat_data.csv be used?*
+Measures what gan_balanced_combat_data.csv does to the production metrics,
+instead of leaving the question open.
 
 Protocol (leakage-clean):
   1. Split REAL campaigns into train/holdout with the exact production
