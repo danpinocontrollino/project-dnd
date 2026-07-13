@@ -27,7 +27,7 @@
 \large\color{black} Predicting the real danger of D\&D 5e combat from 34{,}907 recorded encounters}
 % TODO: add surnames / matricole before submission
 \author{Daniele \,\textperiodcentered\, Francesca \,\textperiodcentered\, Stefano \,\textperiodcentered\, Antonietta\\[2pt]
-\small Statistical Machine Learning --- Final Project, Sapienza Università di Roma, A.Y.~2025/2026\\
+\small Statistical Machine Learning, Final Project. Sapienza Università di Roma, A.Y.~2025/2026\\
 \small \url{https://dnd-appraising.streamlit.app} \quad
 \url{https://github.com/danpinocontrollino/project-dnd}}
 \date{}
@@ -37,203 +37,248 @@
 
 \begin{abstract}
 \noindent
-Dungeons \& Dragons 5e rates every monster with a \emph{Challenge Rating} (CR), a
-designer-assigned difficulty score that has never been validated against actual play.
-We validate it --- and replace it. From 153{,}829 turn snapshots of real online play
-(the FIREBALL corpus) we build 34{,}907 encounter-level observations across 1{,}462
-campaigns, parse offensive statistics directly out of monster statblock text, and train
-a calibrated, monotonicity-constrained XGBoost model of $\eta(x)=P(\text{party wins}\mid x)$.
-Inverting $\eta$ by binary search yields the \emph{True Lethality Level}: the party level
-at which a balanced party of four reaches a target win rate. Validation is grouped by
-campaign --- the true unit of leakage --- giving an honest held-out ROC--AUC of
-0.657 (95\% bootstrap CI $[0.638, 0.674]$) and Brier score 0.139 $[0.134, 0.145]$ at an
-83\% base rate. Because observational play is contaminated by ``DM mercy'' (fights the
-damage math deems hopeless were still recorded as wins 84.5\% of the time), the engine
-adds three explicit domain guards; the survival guard's constants are calibrated
-externally against 490{,}640 simulated fight-to-the-death battles. Along the way, a ridge
-logistic model \emph{wins} on observational AUC (0.655 vs.\ 0.614) yet is rejected: its
-confounded coefficients make it unusable for the interventional questions the
-application asks. The result is a live encounter appraiser that measures the rulebook
-against the data --- with the rulebook's own math implemented honestly.
+Dungeons \& Dragons 5e assigns every monster a \emph{Challenge Rating} (CR), a
+difficulty score chosen by the designers and, to our knowledge, never validated
+against actual play. In this project we validate it, and then replace it. Starting
+from 153{,}829 turn snapshots of real online games (the FIREBALL corpus) we build
+34{,}907 encounter-level observations from 1{,}462 campaigns, parse offensive
+statistics directly out of the monster statblock text, and train a calibrated,
+monotonicity-constrained XGBoost model of $\eta(x)=P(\text{party wins}\mid x)$.
+Inverting $\eta$ by binary search gives the \emph{True Lethality Level}: the party
+level at which a balanced party of four reaches a target win rate. All validation is
+grouped by campaign, which is the real unit of information leakage in this data; the
+held-out ROC--AUC is 0.657 (bootstrap 95\% CI $[0.638, 0.674]$) with a Brier score of
+0.139 $[0.134, 0.145]$ against an 83\% base rate. Observational play turns out to be
+contaminated by what we call DM mercy: fights that the damage arithmetic declares
+hopeless were still recorded as wins 84.5\% of the time. The engine therefore adds
+three explicit domain guards, and the constants of the survival guard are estimated
+from 490{,}640 simulated fight-to-the-death battles rather than chosen by hand. A
+ridge logistic model actually beats the production model on observational AUC (0.655
+vs.\ 0.614) and is rejected anyway, because its confounded coefficients make it
+unusable for the interventional questions the application asks. The final product is
+a live encounter appraiser that measures the rulebook against the data, with the
+rulebook's own procedure implemented faithfully on our side.
 \end{abstract}
 
 \section{Introduction}
-In D\&D 5e a party of 3--6 heroes (levels 1--20) fights monsters run by a Dungeon
-Master (DM). The official difficulty currency is the Challenge Rating: a CR-$k$
-monster should challenge four level-$k$ heroes, and the \emph{Dungeon Master's
-Guide} (DMG, p.~82) grades encounters by comparing multiplier-adjusted monster XP
-against per-level thresholds~\cite{dmg}. CR is a design intention: it compresses
-offense, defense, traits and action economy into one printed number, and its known
-failure modes (high-CR solos folding to action economy, deadly low-CR swarms, trait
-synergies) had never been quantified against play. We ask a precisely defined
-question instead:
+In D\&D 5e a party of 3 to 6 heroes (levels 1 to 20) fights monsters controlled by a
+Dungeon Master (DM). The official difficulty currency is the Challenge Rating: a
+CR-$k$ monster is supposed to challenge four level-$k$ heroes, and the \emph{Dungeon
+Master's Guide} (DMG, p.~82) grades a whole encounter by comparing
+multiplier-adjusted monster XP against per-level thresholds~\cite{dmg}. CR is a
+design intention. It compresses offense, defense, special traits and action economy
+into one printed number, and its failure modes are folklore among players: high-CR
+solo monsters that fold to action economy, cheap swarms that kill, trait synergies
+(a flying monster against a melee party) that no single score can express. Nobody
+had measured any of this against play, so we asked a precisely defined question:
 
 \smallskip
-\noindent\emph{What is the calibrated probability $\eta(x)$ that a given party wins a
-given encounter $x$ --- and at which party level $L$ does a balanced party of four
+\noindent\emph{What is the calibrated probability $\eta(x)$ that a given party wins
+a given encounter $x$, and at which party level $L$ does a balanced party of four
 reach a chosen target win rate (default 65\%)?}
 \smallskip
 
-$L$, found by binary search on $\eta$ over levels $[1,20]$ (18 iterations, quarter-level
-rounding), is the \textbf{True Lethality Level}. Boundary cases get explicit verdicts
-rather than fabricated precision: \emph{trivial} ($\eta\ge$ target at level~1) and
-\emph{beyond deadly} ($\eta<$ target at level~20, reported with its ceiling).
+We find $L$ by binary search on $\eta$ over levels $[1,20]$ (18 iterations, result
+rounded to quarter levels, implemented in
+\code{lethality\_engine.lethality\_appraisal}) and call it the \textbf{True
+Lethality Level}. Boundary cases receive explicit verdicts instead of an invented
+number: \emph{trivial} when $\eta$ is above the target already at level~1, and
+\emph{beyond deadly} when it is below the target even at level~20, in which case we
+also report the level-20 ceiling.
 
-\textbf{Contributions.} (i)~an encounter-level dataset distilled from real play, with
-offensive statistics parsed from statblock text; (ii)~a calibrated, shape-constrained
-model with campaign-grouped validation and bootstrap uncertainty; (iii)~a diagnosis of
-estimand mismatch in observational game data (``DM mercy'') and a three-guard
-architecture, one guard calibrated by external simulation; (iv)~a course-toolbox
-benchmark (penalized logistic, random-feature kernel machine, MMD test, Gaussian
-process) with a decision-theoretic model-selection lesson; (v)~a deployed application
-that compares the model against the DMG's own procedure, implemented faithfully.
+\textbf{Contributions.} (i)~An encounter-level dataset distilled from real play,
+with offensive statistics parsed from statblock text. (ii)~A calibrated,
+shape-constrained model, validated with campaign-grouped splits and bootstrap
+uncertainty. (iii)~A diagnosis of estimand mismatch in observational game data (DM
+mercy) and a three-guard architecture; one guard is calibrated by external
+simulation. (iv)~A benchmark of the course toolbox (penalized logistic regression,
+random-feature kernel machine, MMD two-sample test, Gaussian process) that yields a
+concrete model-selection lesson. (v)~A deployed application that compares the model
+with the DMG's own procedure, implemented honestly.
 
 \section{Data}
 \subsection{From chat logs to encounters}
-FIREBALL~\cite{fireball} collects real games played on Discord through the Avrae bot.
-Our ETL (\code{parse\_fireball.py}) processes 1{,}471 JSONL logs (153{,}829 turn
-snapshots; 134{,}475 valid turns), infers outcomes from terminal HP states, drops
-85{,}778 unresolved fights and 9{,}215 encounters with no bestiary match, and emits
-\textbf{34{,}907 resolved encounters} across \textbf{1{,}462 campaigns}. The party
-win base rate is \textbf{83.0\%} --- a number that shapes everything downstream.
-Each row has 29 raw columns: party level/size and four role flags (healer, tank,
-arcane, martial DPS, mapped from character classes), roster aggregates
-(count-weighted means for continuous statistics, maxima for binary traits and apex
-threats, pooled sums for the damage race), ten monster trait flags, XP totals, and
-the outcome. Party levels are clipped to $[1,20]$ and rosters to 30 (mass-summon
-logs reach 241 actors).
+FIREBALL~\cite{fireball} collects real games played on Discord through the Avrae
+bot. Our ETL script (\code{parse\_fireball.py}) reads 1{,}471 JSONL logs, i.e.\
+153{,}829 turn snapshots of which 134{,}475 are usable. Outcomes are inferred from
+terminal HP strings (``Dead'', ``0/45''); 85{,}778 unresolved fights and 9{,}215
+encounters with no bestiary match are dropped. The result is \textbf{34{,}907
+resolved encounters} from \textbf{1{,}462 campaigns}, with a party win base rate of
+\textbf{83.0\%}, a number that shapes every downstream decision. Each row carries 29
+raw columns: party level, size and four role flags (healer, tank, arcane, martial
+DPS, mapped from character classes); roster aggregates computed as count-weighted
+means for continuous statistics, maxima for binary traits and for apex threats, and
+sums for pooled HP, DPR and XP; ten monster trait flags; and the outcome. Party
+levels are clipped to $[1,20]$ because multiclass strings contain spurious digits,
+and rosters to 30 because mass-summon logs reach 241 tokens on the field.
 
-\subsection{The Attack Potency problem}
-Monster manuals list HP and AC but no machine-readable offense. We parse it from the
-SRD statblock text itself: attack bonuses (\code{+9 to hit}), printed average damage
-(\code{12 (2d6+5)}), multiattack routines (``makes \emph{three} attacks''), save DCs, and
-spell lists priced by a 30-spell PHB damage table. Per-action segmentation separates
-\emph{sustained} DPR (weapon routine) from \emph{burst} (the single scariest action):
-the Lich yields DPR 45 and burst 100 (\emph{Power Word Kill}). Coverage: 321/762
-monsters from real statblocks, the remainder imputed from the DMG's design table by
-CR; parsed DPR is clamped to $[0.25\times,3\times]$ of the design band. Regression
-tests caught two real bugs: versatile weapons double-counted (24 monsters) and dragon
-breath leaking into multiattack math (Adult Red Dragon 72.6\,$\to$\,58; hand-computed
-truth $\approx$45--48). Spot checks: Goblin 5 (true 5), Tarrasque 150 (true $\approx$148).
+\subsection{Offensive statistics from statblock text}
+Monster manuals list HP and AC but no machine-readable offense, which had forced an
+earlier version of the model to use CR itself as a proxy for damage. The module
+\code{monster\_offense.py} parses offense from the SRD statblock text: attack
+bonuses (\code{+9 to hit}), printed average damage (\code{12 (2d6+5)}), multiattack
+routines (``makes \emph{three} attacks''), save DCs, and spell lists priced by a
+30-spell PHB damage table. Parsing is per action, not on the pooled text: weapon
+attacks build \emph{sustained} DPR (multiattack count times mean damage per action,
+riders summed within an action), while save-based actions such as breath weapons are
+excluded from DPR and become the \emph{burst} statistic, the single scariest action.
+The Lich, for example, parses to DPR 45 and burst 100 (\emph{Power Word Kill}).
+Coverage is 321 of 762 monsters; the rest are imputed from the DMG design table by
+CR, and parsed DPR is clamped to $[0.25\times,3\times]$ of that table's band so a
+regex accident cannot create a CR-1 monster with DPR 400. Unit tests pin two real
+bugs we fixed: versatile weapons were double-counted (``7 \ldots{} or 8 two-handed''
+summed to 15; 24 monsters affected) and dragon breath leaked into the multiattack
+mean (Adult Red Dragon 72.6 $\to$ 58; hand-computed truth is roughly 45 to 48).
+Spot checks: Goblin 5 (true 5), Tarrasque 150 (true $\approx$148).
 
-\subsection{Playing fair with the rulebook}
-If we claim to beat the DMG we must implement it correctly. The application's
-``by-the-book'' verdict runs the full p.~82 procedure --- total XP, the count
-multiplier ladder with the p.~83 party-size adjustment, and an inverse XP lookup to an
-equivalent single-monster CR --- so that $6\times$CR-1 monsters read as one CR-6
-encounter, not ``CR~1''. The implementation passes nine regression tests including the
-DMG's own worked example; reported discrepancies therefore measure the model against
-the rulebook's best effort, not a strawman.
+\subsection{Implementing the rulebook fairly}
+Since we claim to beat the DMG, we must implement it correctly.
+\code{official\_encounter\_estimate()} in \code{lethality\_engine.py} runs the full
+p.~82 procedure: total XP, the count-multiplier ladder ($\times1$, $\times1.5$,
+$\times2$, $\times2.5$, $\times3$, $\times4$) with the p.~83 party-size step
+adjustment, and an inverse XP lookup (\code{xp\_to\_cr}) to the equivalent
+single-monster CR. Six CR-1 monsters are therefore reported as $1{,}200 \times 2 =
+2{,}400$ adjusted XP, about one CR-6 monster, and not as ``CR 1''. Nine regression
+tests cover this code, including the DMG's own worked example, so any discrepancy
+we report measures the model against the rulebook's best effort.
 
 \section{Methods}
-\subsection{Features: combat math as covariates}
-Forty-five features in five families: raw party/roster aggregates (15); offensive
-potency (5); power curves and ratios (6); trait$\times$composition interactions such
-as \emph{magic resistance}$\times$\emph{arcane party} (6); and combat mathematics plus
-the DMG budget (13) --- to-hit probabilities on both sides from the actual d20 rule,
-rounds-to-kill in both directions with a log-ratio, nova pressure
-(\code{burst\_vs\_pc\_hp}), and the multiplier-adjusted XP budget. All feature
-engineering lives inside a serialized \code{sklearn} transformer, so training and
-serving cannot drift.
+\subsection{Features}
+There are 45 features in five families: raw party and roster aggregates (15);
+offensive potency (5); power curves and ratios (6); trait-by-composition
+interactions such as \emph{magic resistance} $\times$ \emph{arcane party} (6); and
+combat mathematics plus the DMG budget (13). The combat-math family encodes the
+actual d20 rules: for instance the party hit chance is
+$\operatorname{clip}\!\big((21 + \text{atk}_\text{party} -
+\text{AC}_\text{monster})/20,\ 0.05,\ 0.95\big)$ with a level-dependent estimate of
+the party attack bonus, and symmetric for the monsters; from these we derive
+rounds-to-kill in both directions, their log ratio, and \code{burst\_vs\_pc\_hp}
+(can one action delete a hero from full health?). All feature engineering lives in
+a single \code{sklearn} transformer (\code{DnDFeatureEngineer}) that is serialized
+inside the model pickle, so training and serving cannot compute different features.
 
 \subsection{Model and calibration}
-The production model is XGBoost~\cite{xgboost} (300 trees, depth 4, learning rate
-0.149, subsample 0.68, column subsample 0.85, $\lambda$=0.105, $\alpha$=0.091,
-$\gamma$=0.009; tuned by Optuna~\cite{optuna} against a grouped-CV objective, study
-persisted) under \textbf{45 monotone constraints}: party level, size and role flags
-positive; monster count, CR, HP, DPR, burst, attack bonus, save DC and every hostile
-trait negative. Constraints double as the out-of-distribution guard: inputs are also
-clipped to legal 5e bands before featurization. Probabilities are calibrated with
-Platt scaling~\cite{platt} on \emph{campaign-grouped} folds. Isotonic calibration
-was evaluated and rejected: its piecewise-constant map collapsed the level search
-(one Lich $\equiv$ two Liches) while measuring marginally worse (Brier 0.1394 vs.\
-0.1397).
+The production model is XGBoost~\cite{xgboost} with 300 trees of depth 4, learning
+rate 0.149, subsample 0.68, column subsample 0.85, \code{min\_child\_weight} 7 and
+regularization $(\lambda,\alpha,\gamma)=(0.105,\,0.091,\,0.009)$, chosen by
+Optuna~\cite{optuna} with the grouped-CV AUC as objective (the study is persisted
+to SQLite and resumes across runs). We impose \textbf{45 monotone constraints}:
+positive for party level, party size and each role flag; negative for monster
+count, CR, HP, DPR, burst, attack bonus, save DC and every hostile trait. The
+constraints double as the out-of-distribution safety net, together with input
+clipping to legal 5e ranges inside the transformer. Probabilities are calibrated
+with Platt scaling~\cite{platt} on \emph{campaign-grouped} folds; this works
+because the pipeline preserves row order, so precomputed positional splits stay
+valid on the transformed matrix the calibrator sees. We first tried isotonic
+calibration and rejected it for a concrete reason: its piecewise-constant map
+collapsed the binary search onto plateau edges (one Lich and two Liches received
+the same level) while also measuring marginally worse (Brier 0.1394 vs.\ 0.1397).
 
 \subsection{Validation protocol}
-Encounters within a campaign share party, DM and house rules, so the campaign is the
-unit of leakage. Everything is grouped by it: \code{StratifiedGroupKFold}
-cross-validation, a grouped 80/20 holdout ($n_{\text{test}}{=}7{,}106$), and the
-calibration folds themselves. Headline metrics carry 95\% percentile-bootstrap CIs
-(2{,}000 resamples). A kernel two-sample test (unbiased MMD$^2$~\cite{mmd}, RBF with
-median-heuristic bandwidth, permutation null) between train- and held-out-campaign
-feature distributions gives MMD$^2{=}3.1\times10^{-4}$, $p{=}0.12$: no detectable
-covariate shift, so the grouped-CV/holdout gap reflects campaign-level outcome
-variance rather than distribution drift.
+Encounters within one campaign share the party, the DM and the house rules, so the
+campaign is the unit of leakage. Every split is grouped by it: 4-fold
+\code{StratifiedGroupKFold} for model selection, a grouped 80/20 holdout
+(\code{GroupShuffleSplit}, seed 42; $n_\text{train}{=}27{,}502$,
+$n_\text{test}{=}7{,}106$), and the calibration folds themselves. Headline metrics
+carry 95\% percentile-bootstrap confidence intervals (2{,}000 resamples of the test
+set; resamples with a single class are skipped). As a shift diagnostic we run a
+kernel two-sample test (unbiased MMD$^2$~\cite{mmd}, RBF kernel with
+median-heuristic bandwidth, permutation null with 200 permutations, 1{,}500 points
+per side) between train-campaign and held-out-campaign feature distributions:
+MMD$^2{=}3.1\times10^{-4}$, $p{=}0.12$. There is no detectable covariate shift, so
+the gap between grouped CV and holdout reflects campaign-level outcome variance,
+not distribution drift.
 
-\section{Where the data lies: guards and simulation}
+\section{Guards and simulation}
 \subsection{DM mercy}
-An early model rated \emph{nineteen} CR-21 Liches as beatable by a level-8 party.
-The cause is in the world, not the code: in fights the deterministic damage race
-declares hopeless (party deleted in $\le$1 round), the logs still record a party win
-\textbf{84.5\%} of the time (659 rows) --- fudged rolls, retreats recorded as wins,
-reinforcements. The logs answer ``what happens at real tables''; the application asks
-``what if you fought \emph{to the death}''. That is an estimand mismatch no amount of
-identically-collected data can repair.
+An early model rated \emph{nineteen} CR-21 Liches as beatable by a level-8 party
+with 66\% probability. The cause was in the data, not the code: in fights where the
+deterministic damage race says the party is deleted within one round, the logs
+still record a party win \textbf{84.5\%} of the time (659 rows). DMs fudge rolls,
+retreats get logged as wins, reinforcements arrive. The logs answer ``what happens
+at real tables''; the application asks ``what happens if you fight to the death''.
+This is an estimand mismatch, and no additional data collected the same way can fix
+it.
 
 \subsection{Three guards}
-(1)~\emph{Shape priors and clipping} (above). (2)~\emph{Roster dominance}: count-weighted
-averages dilute --- a Lich with 2 ogres and 6 goblins has mean CR 2.94 versus the
-Lich's 21, and the raw model rated the larger fight easier (level 3.25 vs.\ 5.0); the
-engine therefore also scores every homogeneous sub-roster and returns the
-\emph{minimum} win probability, enforcing the axiom that adding monsters can never
-help the party. (3)~A \emph{survival physics cap}
-$P(\text{win}) \le \sigma(a\cdot\mathrm{TTK}+b)$, where TTK is the deterministic
-rounds-to-kill-the-party computed from the same feature mathematics the model trains
-on --- smooth, monotone in level and decreasing in roster damage, so the binary search
-and dominance guarantees survive.
-
-\subsection{Calibrating the guard by simulation}
-Hand-tuned constants are a confession, so we replaced them. We vendored the public
-Monte Carlo engine of Battlecast (a 5e combat simulator resolving initiative,
-movement, spell slots and conditions with scripted play and \emph{no} mercy) and ran
-a designed grid of \textbf{304 cells $\times$ 2{,}000 trials = 490{,}640 battles}
-(party fixed to Fighter/Cleric/Wizard/Rogue): a 180-cell guard grid (boss CR
-$\{2,5,10,15,21\}\times$ count $\{1..19\}\times$ level $\{1..20\}$), a 100-cell
-``mercy'' grid (25 SRD monsters $\times$ 4 levels), and a 24-cell OOD grid (HP
-$\times\{1,5,20\}$, AC $+\{0,8\}$ clones). A binomially-weighted logistic fit of
-simulated $P(\text{win})$ on TTK gives
+First, the shape constraints and clipping described above. Second, \emph{roster
+dominance}: count-weighted averages dilute, so a Lich with two ogres and six
+goblins has mean CR 2.94 against the Lich's own 21, and the unguarded model rated
+that larger fight \emph{easier} (level 3.25 vs.\ 5.0). The engine therefore also
+scores every homogeneous sub-roster and returns the elementwise minimum of the win
+probabilities, enforcing the axiom that adding monsters can never help the party
+(\code{predict\_win\_for\_parties}). Third, a \emph{survival cap},
 \[
-\sigma(1.63\,\mathrm{TTK} - 3.98) \quad \text{replacing} \quad \sigma(2.197\,\mathrm{TTK}-4.394),
+P(\text{win}) \;\le\; \sigma\!\big(a\cdot\mathrm{TTK} + b\big),
 \]
-i.e.\ caps of 9\%/33\%/71\% at 1/2/3 rounds of survival (the hand guess was too
-generous in the 2--3-round zone), inert above ${\approx}3.7$ rounds where training
-data is trustworthy (Fig.~\ref{fig:guard}). The deployed Lich ladder becomes
-$1\to3.25$, $2\to6.75$, $4\to12.75$, $8{+}\to$ \emph{beyond deadly} (19 Liches:
-$P(\text{win})$ at level 20 $=9.1\%$).
+where TTK is the deterministic rounds-to-kill-the-party computed from the same
+feature mathematics the model trains on. The cap is smooth, increasing in party
+level and decreasing in roster damage, so the binary search and the dominance
+property both survive it.
+
+\subsection{Calibrating the cap by simulation}
+Hand-tuned constants would be a weakness in an exam and in production alike, so we
+estimated them externally. We vendored the public Monte Carlo engine of Battlecast
+(a 5e combat simulator that resolves initiative, movement, spell slots and
+conditions, with scripted play and no mercy; provenance and credits in
+\code{battlecast\_bridge/PROVENANCE.md}) and ran three designed grids, 304 cells
+and \textbf{490{,}640 simulated battles} in total, with up to 2{,}000 trials per
+cell (the driver reduces trials adaptively for the largest rosters). The party is
+fixed to Fighter/Cleric/Wizard/Rogue. The grids: a 180-cell \emph{guard} grid (boss
+CR $\{2,5,10,15,21\}\times$ count $\{1,2,4,8,12,19\}\times$ level
+$\{1,5,9,13,17,20\}$); a 100-cell \emph{mercy} grid (25 SRD monsters spanning CR 0
+to 10, four levels each); and a 24-cell \emph{OOD} grid of HP- and AC-scaled
+clones. A binomially weighted logistic fit of simulated $P(\text{win})$ on TTK over
+the guard grid gives
+\[
+\sigma(1.63\,\mathrm{TTK} - 3.98)
+\quad\text{replacing}\quad
+\sigma(2.197\,\mathrm{TTK} - 4.394),
+\]
+that is, caps of 9\%, 33\% and 71\% at 1, 2 and 3 rounds of survival; our original
+hand guess (10/50/90\%) was too generous in the 2-to-3-round zone. The cap is
+essentially inactive above ${\approx}3.7$ rounds, exactly where the training data
+is trustworthy (Fig.~\ref{fig:guard}). With all guards in place the Lich ladder
+reads $1\to3.25$, $2\to6.75$, $4\to12.75$, and $8{+}\to$ \emph{beyond deadly}
+(nineteen Liches: 9.1\% at level 20).
 
 Pairing both lenses on the mercy grid quantifies the bias (Fig.~\ref{fig:mercy}):
-correlation 0.845, with a \emph{crossover} --- the model sits ${\approx}{+}0.32$
-above the simulator on hard fights (mercy inflation; few cells, directional) and
-${\approx}{-}0.14$ below on easy ones (the 83\% ceiling from retreats and noisy
-labels). On the OOD grid the extremes agree exactly (HP$\times$20 clones win
-0.000--0.003 of deathmatches) while fine mid-range ordering is only moderate
-(Spearman $\rho{=}0.54$). Caveats: the simulator implements 2024-SRD rules versus
-2014-era logs, and scripted optimal play makes deathmatch rates an upper bound.
+correlation 0.845, with a crossover. The model sits about ${+}0.32$ above the
+simulator on hard fights (mercy inflation; only a handful of cells fall in this
+region, so the number is directional) and about ${-}0.14$ below on easy ones,
+which is the 83\% ceiling produced by retreats and noisy labels. On the OOD grid
+the extremes agree exactly (HP$\times$20 clones win 0.000 to 0.003 of
+deathmatches) while fine mid-range ordering is only moderate (Spearman
+$\rho{=}0.54$). Two caveats we state openly: the simulator implements 2024-SRD
+rules while our logs are 2014-era play, and its scripted optimal play makes
+deathmatch rates an upper bound.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{battlecast_guard_fit.png}
-  \caption{Survival guard vs.\ deathmatch truth: 180 simulated cells, the calibrated
-  fit (production) and the previous hand-tuned curve.}
+  \caption{Survival cap vs.\ deathmatch outcomes: 180 simulated cells, the
+  calibrated fit (production) and the previous hand-tuned curve.}
   \label{fig:guard}
 \end{figure}
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{battlecast_mercy_gap.png}
-  \caption{DM mercy quantified: model (table reality) vs.\ simulator (deathmatch),
-  one point per encounter, color = CR.}
+  \caption{DM mercy quantified: model (table reality) vs.\ simulator
+  (deathmatch), one point per encounter, color = CR.}
   \label{fig:mercy}
 \end{figure}
 
 \section{Results}
 \subsection{Held-out performance}
 Table~\ref{tab:main} reports performance on held-out campaigns. Calibration is
-tight where the data mass lives (predicted 0.8--0.9), with mild overconfidence in
-the lowest bins (Fig.~\ref{fig:calib}). Native TreeSHAP~\cite{shap} ranks party
-level, monster size, nova pressure (\code{burst\_vs\_pc\_hp}), action economy
-(\code{num\_monsters\_total}) and party hit chance as the leading signals --- the
-parsed offensive statistics the official bestiary lacks are first-class drivers.
+tight where the data mass lives (predicted 0.8 to 0.9) with mild overconfidence in
+the lowest bins (Fig.~\ref{fig:calib}). TreeSHAP values, computed through
+XGBoost's native \code{pred\_contribs}~\cite{shap}, rank party level, monster
+size, nova pressure (\code{burst\_vs\_pc\_hp}), action economy
+(\code{num\_monsters\_total}) and party hit chance as the leading signals. In
+other words, the offensive statistics that the official bestiary does not even
+publish are among the strongest predictors of real outcomes.
 
 \begin{table}[t]
 \centering\footnotesize\setlength{\tabcolsep}{4pt}
@@ -260,19 +305,22 @@ Base rate $P(\text{win})$ & \multicolumn{2}{c}{0.830}\\
   \label{fig:calib}
 \end{figure}
 
-\subsection{Prediction $\neq$ decision}
+\subsection{Prediction is not decision}
 Under identical grouped CV (Table~\ref{tab:zoo}), an $\ell_2$-penalized logistic
-regression \emph{beats} the production model on observational risk. Promoted
-experimentally to production, it rated 8 Liches as trivial and a 10{,}000-HP monster
-as beatable: with no shape constraints, the linear fit absorbs selection confounding
---- its coefficients give \code{num\_monsters}, \code{total\_dpr} and \code{burst}
-\emph{positive} signs and \code{avg\_party\_level} a \emph{negative} one (``stronger
-parties lose more'', because stronger parties are served harder content). The
-application's queries are interventional (``same monster, more of them''), so we
-deploy the constrained model and accept ${\approx}0.04$ AUC as the price of
-decision-grade behavior. The 13-axiom behavioral suite (count monotonicity, roster
-dominance, level monotonicity, boundary verdicts, OOD flow) now gates every model
-change.
+regression ($C{=}0.03$; the sweep over $C\in[3\cdot10^{-3},3]$ was nearly flat)
+\emph{beats} the production model on observational risk. We promoted it to
+production as an experiment, and it failed immediately: it rated 8 Liches as
+trivial and a 10{,}000-HP monster as beatable. Its coefficients explain why. With
+no shape constraints the linear fit absorbs selection confounding:
+\code{num\_monsters}, \code{total\_dpr} and \code{burst} come out \emph{positive}
+and \code{avg\_party\_level} comes out \emph{negative}, meaning ``stronger parties
+lose more'', because stronger parties are served harder content
+(\code{figures/logistic\_coefficients.png}). The application's queries are
+interventional (``same monster, more of them''), so we deploy the constrained
+model and accept roughly 0.04 AUC as the price of sane counterfactual behavior. A
+13-axiom behavioral suite (\code{behavior\_suite.py}: count monotonicity, roster
+dominance, level monotonicity, boundary verdicts, the full OOD flow through the CR
+predictor) now gates every model change, alongside 61 unit tests.
 
 \begin{table}[t]
 \centering\footnotesize\setlength{\tabcolsep}{4pt}
@@ -285,51 +333,58 @@ RFF kernel logistic~\cite{rff} & $0.624 \pm 0.013$ & 0.142\\
 XGBoost + constraints (ours) & $0.614 \pm 0.033$ & 0.141\\
 \bottomrule
 \end{tabular}
-\caption{Course model zoo. The linear model wins the metric and loses the job.}
+\caption{Model comparison. The linear model wins the metric and loses the job.}
 \label{tab:zoo}
 \end{table}
 
 \subsection{Auxiliary analyses}
-\textbf{Gaussian process.} On the 797-monster CR-prediction task, a GP
-regressor~\cite{gpml} (RBF + white kernel, marginal-likelihood fitting) reaches MAE
-0.86 vs.\ XGBoost's 0.94 ($R^2{=}0.954$) with 95\% predictive intervals achieving
-\textbf{0.95 empirical coverage}.
-\textbf{Synthetic balancing.} CTGAN~\cite{ctgan}-generated synthetic losses
-(leakage-guarded: fitted on training campaigns only) used to ``balance'' the 83/17
-classes degrade the same holdout to AUC 0.638 and Brier \textbf{0.186}, dragging the
-predicted base rate to 0.61: with proper losses and calibration, imbalance was never
-the problem, and resampling destroys calibration to fix it.
+\textbf{Gaussian process.} On the separate task of predicting official CR from raw
+monster statistics ($n{=}797$), a GP regressor~\cite{gpml} with an ARD RBF kernel
+plus white noise, fitted by marginal likelihood, reaches MAE 0.86 against
+XGBoost's 0.94 ($R^2{=}0.954$), and its 95\% predictive intervals achieve
+\textbf{0.95 empirical coverage} on the test split.
+\textbf{Synthetic balancing.} CTGAN~\cite{ctgan} synthetic losses (23{,}091 rows,
+fitted only on training campaigns to avoid leakage) used to balance the 83/17
+classes degrade the same holdout to AUC 0.638 and Brier 0.186, and drag the mean
+predicted probability from 0.83 down to 0.61. With a proper loss and calibration,
+class imbalance was never the problem; resampling destroys calibration to fix a
+non-issue.
 
 \section{The application}
-A Streamlit appraiser (auto-deployed from \code{main}) exposes three modes ---
-official bestiary (762 monsters with offense provenance badges), homebrew appraiser
-(a CR predictor for ``what the book would print'', MAE 0.9, plus the True Lethality
-Level), and a mixed-roster encounter builder aggregated exactly like training. Every
+A Streamlit appraiser (auto-deployed from \code{main}) offers three modes: the
+official bestiary (762 monsters, each offense value labeled with its provenance,
+parsed statblock or DMG table), a homebrew appraiser (a CR predictor answering
+``what the book would print'', MAE 0.9, next to the True Lethality Level), and a
+mixed-roster encounter builder whose aggregation matches training exactly. Every
 appraisal shows the by-the-book verdict next to the model's, win curves for five
-party compositions, a party-size$\times$level heatmap, the fairest matchups with
-official DMG tiers, and threat flags. The target win rate is a user-facing slider:
-``fair'' is a policy, not a constant. Engineering: 61 unit tests + 13 behavioral
-axioms (\code{make verify}), append-only experiment log, pinned environment,
-one-command pipeline (\code{make retrain}).
+party compositions, a party-size by level heatmap, the fairest matchups with
+official DMG tiers, and threat flags. The target win rate is a slider from 0.50 to
+0.90: ``fair'' is a policy, not a constant. Reproducibility: \code{make retrain}
+runs data $\to$ training $\to$ 61 tests $\to$ 13 behavioral checks;
+\code{make battlecast} regenerates the simulation study; every training run is
+appended to \code{figures/experiments.jsonl} with its git commit.
 
 \section{Limitations}
-(i)~\emph{Observational ceiling}: dice variance, table tactics and unrecorded items
-bound discrimination; AUC 0.657 with CIs is honest, not weak, at an 83\% base rate.
-(ii)~\emph{Estimand mismatch} is handled by an explicit, sim-calibrated guard --- a
-documented modeling choice, not end-to-end learning. (iii)~\emph{Simulator caveats}:
-2024-SRD rules, optimized default builds, scripted play. (iv)~\emph{Thin support on
-hard fights}: 96/100 mercy cells are deathmatch-easy; future work includes VTT
-instrumentation, 30-second post-encounter forms with explicit retreat/fudge labels
-(turning mercy into a censoring variable), and an all-SRD replay grid.
+(i)~\emph{Observational ceiling}: dice variance, table tactics and unrecorded
+magic items bound what any feature set can see; at an 83\% base rate, AUC 0.657
+with confidence intervals is an honest number, not a weak one.
+(ii)~\emph{Estimand mismatch} is handled by an explicit, simulation-calibrated
+guard: a documented modeling choice with its own tests, not something learned end
+to end. (iii)~\emph{Simulator caveats}: 2024-SRD rules, optimized default builds,
+scripted play. (iv)~\emph{Thin support on hard fights}: 96 of 100 mercy-grid cells
+are deathmatch-easy. Future work: instrumenting a virtual tabletop (Foundry) for
+clean combat events, a 30-second post-encounter form with explicit retreat/fudge
+labels that would turn mercy into a censoring variable, and a replay grid of real
+logged encounters restricted to SRD rosters.
 
 \section{Conclusions}
-Five lessons travel beyond the game. Validate by the unit of leakage or every number
-is fiction; calibrate when the product consumes probabilities, and measure it; a
-better-AUC model can be unusable --- constraints encode the difference between
-prediction and decision; know your estimand, because observational data cannot answer
-counterfactual questions while simulation can (and can even calibrate your priors);
-and the rulebook deserved a fair trial --- honestly implemented, it still loses to
-34{,}907 real fights.
+Five lessons travel beyond the game. Validate by the unit of leakage, or every
+number is fiction. Calibrate when the product consumes probabilities, and measure
+the calibration instead of assuming it. A model with better AUC can be unusable;
+constraints encode the difference between prediction and decision. Know your
+estimand, because observational data cannot answer counterfactual questions, while
+simulation can, and can even estimate your priors. And the rulebook deserved a
+fair trial: honestly implemented, it still loses to 34{,}907 real fights.
 
 \begin{thebibliography}{9}\small
 \bibitem{fireball} A.~Zhu et al. FIREBALL: A Dataset of Dungeons and Dragons

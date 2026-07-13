@@ -421,10 +421,10 @@
   <div class="cols">
     <div>
       <ul style="font-size:.98em">
-        <li><strong>To-hit geometry</strong>: both hit chances from the actual d20 rule — this is how “high AC vs low attack bonus” enters the model.</li>
+        <li><strong>To-hit geometry</strong>: both hit chances from the actual d20 rule: this is how “high AC vs low attack bonus” enters the model.</li>
         <li><strong>The damage race</strong>: rounds-to-kill on both sides + log-ratio; effective HP inflated by resistances, regeneration, legendary.</li>
-        <li><strong>Nova pressure</strong>: <code>burst_vs_pc_hp</code> — can one action delete a hero from full health?</li>
-        <li>Trait × composition interactions; the DMG XP budget (with multiplier) as a feature — the rulebook gets to testify.</li>
+        <li><strong>Nova pressure</strong>: <code>burst_vs_pc_hp</code>: can one action delete a hero from full health?</li>
+        <li>Trait × composition interactions; the DMG XP budget (with multiplier) as a feature (the rulebook gets to testify).</li>
       </ul>
       <div class="card" style="margin-top:.9em"><span class="title">45 features, five families</span>
         <div style="display:grid;grid-template-columns:auto auto;gap:.25em 1em;font-size:.88em">
@@ -448,7 +448,7 @@
   <h2>Gradient boosting with domain priors</h2>
   <div class="cols">
     <ul>
-      <li><strong>XGBoost</strong>, 45 features, Optuna-tuned under grouped CV: 300 trees, depth 4, heavy subsampling — shallow and regularized, exactly what noisy real-play logs demand.</li>
+      <li><strong>XGBoost</strong>, 45 features, Optuna-tuned under grouped CV: 300 trees, depth 4, heavy subsampling, shallow and regularized. That;s how you build it for noisy real logs for this type of data.</li>
       <li><strong>45 monotone constraints</strong> as shape priors baked into every split: party level, size and each role flag <b>+</b>; monster count, CR, HP, DPR, burst, attack bonus, save DC and every hostile trait <b>−</b>. Higher level can never hurt; more monster DPR can never help.</li>
       <li>Inputs clipped to legal 5e bands before features: level 1–20, roster ≤ 30, AC 10–30, DPR ≤ 350 (≤ 1,500 pooled), burst ≤ 400, save DC 8–30 ⇒ a 10,000-HP homebrew lands on the manifold edge, not on a random leaf.</li>
       <li>The constraints are also the <strong>OOD story</strong>: beyond the data, trees can only flatten in the safe direction — never invert.</li>
@@ -515,8 +515,8 @@
     </div>
   <table style="margin-top:.4em;width:100%">
     <tr><th class="l">Contender (identical grouped CV)</th><th>AUC ± sd</th><th>Brier</th><th>Verdict</th></tr>
-    <tr><td class="l">Ridge logistic (Lec 04+05)</td><td>0.655 ± 0.031</td><td><b>0.136</b></td><td class="l">best risk — fails interventional sanity</td></tr>
-    <tr><td class="l">RFF kernel logistic (Lec 06)</td><td>0.624 ± 0.013</td><td>0.142</td><td class="l">kernel machine at n≈28k, no edge here</td></tr>
+    <tr><td class="l">Ridge logistic</td><td>0.655 ± 0.031</td><td><b>0.136</b></td><td class="l">best risk — fails interventional sanity</td></tr>
+    <tr><td class="l">RFF kernel logistic</td><td>0.624 ± 0.013</td><td>0.142</td><td class="l">kernel machine at n≈28k, no edge here</td></tr>
     <tr><td class="l">XGBoost + monotone constraints</td><td>0.614 ± 0.033</td><td>0.141</td><td class="l"><b>deployed</b> — decision-grade behavior</td></tr>
   </table>
 </section>
@@ -951,7 +951,7 @@
   {
     const box=document.getElementById('benchChart');
     const svg=S('svg',{viewBox:'0 0 460 210',style:'width:100%'},box);
-    const rows=[['Ridge logistic (Lec 04+05)',0.655,'#c9a227'],['RFF kernel logistic (Lec 06)',0.624,'#5b9bd5'],['XGBoost — production',0.614,'#a3273a']];
+    const rows=[['Ridge logistic',0.655,'#c9a227'],['RFF kernel logistic',0.624,'#5b9bd5'],['XGBoost — production',0.614,'#a3273a']];
     S('text',{x:10,y:20,'font-size':13,fill:'#e8dcc0','font-weight':'bold'},svg).textContent='Grouped-CV ROC-AUC (win prediction)';
     rows.forEach(([n,v,c],k)=>{ const y=45+k*50, w=(v-.5)/.2*380;
       S('text',{x:10,y:y-6,'font-size':11.5,fill:'#e8dcc0'},svg).textContent=n;
