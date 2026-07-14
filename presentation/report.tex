@@ -331,7 +331,7 @@ interventional (``same monster, more of them''), so we deploy the constrained
 model and accept roughly 0.04 AUC as the price of sane counterfactual behavior. A
 13-axiom behavioral suite (\code{behavior\_suite.py}: count monotonicity, roster
 dominance, level monotonicity, boundary verdicts, the full OOD flow through the CR
-predictor) now gates every model change, alongside 61 unit tests.
+predictor) now gates every model change, alongside 64 unit tests.
 
 \begin{table}[t]
 \centering\footnotesize\setlength{\tabcolsep}{4pt}
@@ -371,7 +371,7 @@ appraisal shows the by-the-book verdict next to the model's, win curves for five
 party compositions, a party-size by level heatmap, the fairest matchups with
 official DMG tiers, and threat flags. The target win rate is a slider from 0.50 to
 0.90: ``fair'' is a policy, not a constant. Reproducibility: \code{make retrain}
-runs data $\to$ training $\to$ 61 tests $\to$ 13 behavioral checks;
+runs data $\to$ training $\to$ 64 tests $\to$ 13 behavioral checks;
 \code{make battlecast} regenerates the simulation study; every training run is
 appended to \code{figures/experiments.jsonl} with its git commit.
 

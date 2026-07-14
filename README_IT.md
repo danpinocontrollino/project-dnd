@@ -280,7 +280,7 @@ streamlit run app.py
 python3 fair_fight_finder.py
 
 # 6. Verifiche (da lanciare dopo OGNI modifica al modello)
-python3 -m pytest tests/ -q      # 61 test unitari
+python3 -m pytest tests/ -q      # 64 test unitari
 python3 behavior_suite.py        # 13 assiomi comportamentali
 
 # 7. Benchmark allineato al corso (logistica, kernel RFF, MMD, GP)

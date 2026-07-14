@@ -112,7 +112,7 @@ python3 fair_fight_finder.py
 ├── 📄 gan_trial.py                       # CTGAN synthetic-loss generation (leakage-guarded: fits on training campaigns only).
 ├── 📄 gan_ablation.py                    # Measures GAN balancing vs real data on the same campaign holdout.
 ├── 📄 Makefile                           # One-command pipeline: make retrain / battlecast / app / help.
-├── 📁 tests/                             # 61 pytest units: parsing regexes, feature math, book math, guard.
+├── 📁 tests/                             # 64 pytest units: parsing regexes, feature math, book math, guard.
 ├── 📁 battlecast_bridge/                 # Deathmatch simulation grids: vendored engine, collector, analysis.
 ├── 📄 true_lethality_model.pkl           # Exported, self-contained calibrated pipeline.
 ├── 📄 monster_offense_stats.csv          # Per-monster DPR / attack bonus / save DC table (generated).
@@ -154,9 +154,9 @@ The course benchmark (`model_comparison.py`, campaign-grouped 4-fold CV) produce
 
 | Model | Grouped CV AUC | Brier |
 |---|---|---|
-| **Ridge logistic** (Lec 04+05) | **0.657 ± 0.029** | **0.1362** |
-| RFF kernel logistic (Lec 06) | 0.621 ± 0.010 | 0.1424 |
-| XGBoost, monotone-constrained (production) | 0.616 ± 0.035 | 0.1398 |
+| **Ridge logistic** (Lec 04+05) | **0.655 ± 0.031** | **0.1363** |
+| RFF kernel logistic (Lec 06) | 0.624 ± 0.013 | 0.1418 |
+| XGBoost, monotone-constrained (production) | 0.614 ± 0.033 | 0.1406 |
 
 The penalized *linear* model wins on observational predictive risk — the engineered combat-math features carry the signal, and the flexible tree model overfits campaign idiosyncrasies ("small is the new big"). **And yet it is deliberately not the production model.** When promoted, it rated 8 Liches as *trivial* and a 10,000-HP monster as beatable: with no shape constraints, the linear fit absorbs DM-curation confounding (in real logs, many-monster fights are weak mobs that parties beat, so the monster-count coefficient comes out *positive*). The app asks **interventional** questions — "same monster, more of them" — and the monotone-constrained XGBoost, though ~0.04 AUC worse observationally, is the only candidate whose counterfactual sweeps respect domain physics. We accept the predictive-risk penalty to buy decision-grade behavior. The confounding is on full display in `figures/logistic_coefficients.png` (the rejected model's standardized log-odds): `num_monsters`, `total_monster_dpr` and `max_monster_burst` all carry **positive** coefficients, and — most damning — `avg_party_level` comes out **negative**: the unconstrained fit learned "higher-level parties lose more," because higher-level parties face harder curated content. Textbook selection confounding, readable directly off the coefficients.
 
@@ -172,8 +172,8 @@ The dataset is imbalanced (~84% Party Wins), and an obvious idea is CTGAN class 
 Balancing shifts the training base rate from ~83% to ~45%, so the balanced model's probabilities are deflated by ~20 percentage points — and here it does not even buy discrimination (AUC drops too). Since the product decision — "which party level gives a 65% win rate?" — consumes *calibrated* probabilities, the GAN CSV is **not** used for the production model. Its legitimate uses are exactly this ablation, robustness experiments, and as course material on tabular GANs.
 
 Two further course-toolbox results (`figures/course_benchmark.json`):
-- **Kernel two-sample test (MMD, Lec 06 pt 3)**: MMD² = 0.00030, permutation p = 0.14 → no detectable covariate shift between training and held-out campaigns; the CV-holdout gap is campaign-level outcome variance, not distribution shift.
-- **Gaussian Process CR predictor (Lec 06 pt 4)**: GP (RBF + White kernel) beats XGBoost on the 797-monster CR task — MAE 0.88 vs 0.90, R² 0.954 — with 95% predictive intervals achieving exactly **0.95 empirical coverage**.
+- **Kernel two-sample test (MMD, Lec 06 pt 3)**: MMD² = 0.00031, permutation p = 0.12 → no detectable covariate shift between training and held-out campaigns; the CV-holdout gap is campaign-level outcome variance, not distribution shift.
+- **Gaussian Process CR predictor (Lec 06 pt 4)**: GP (RBF + White kernel) beats XGBoost on the 797-monster CR task — MAE 0.86 vs 0.94, R² 0.954 — with 95% predictive intervals achieving exactly **0.95 empirical coverage**.
 
 ---
 

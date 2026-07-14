@@ -1,241 +1,722 @@
-# 🎓 Exam Guide — True Lethality Engine
+# 🎓 Guida all'esame — True Lethality Engine
 
-*How to present and defend this project at the Statistical Machine Learning exam.
-Every number here is reproducible from the repo (`make retrain`, `make benchmark`,
-`python3 gan_ablation.py`) and lives in `figures/`.*
-
----
-
-## 1. The 60-second pitch
-
-> D&D 5e rates monster difficulty with the Challenge Rating, a hand-made design
-> heuristic. We replace it with an **empirical, calibrated estimate of
-> P(party wins | encounter)**, learned from **34,907 real combats** (FIREBALL
-> dataset, real Discord play). The model is a **Platt-calibrated,
-> monotone-constrained XGBoost** on ~45 engineered combat-math features,
-> validated with **campaign-grouped cross-validation** (AUC 0.657 [0.638, 0.674]
-> holdout, 0.608 ± 0.043 grouped CV). From the calibrated probability we derive
-> a product: the *True Lethality Level* — the party level at which a balanced
-> party of 4 reaches a target win rate. The interesting statistics is in what
-> the data **cannot** say: selection effects (DMs curate fights, players
-> retreat) contaminate exactly the region the product queries, so the served
-> model is wrapped in three explicit domain guards, each one documented,
-> justified and covered by tests.
+*Spiegazione componente per componente di tutto il progetto. Non è un riassunto:
+ogni sezione spiega COSA fa quel pezzo, COME lo fa passo per passo, PERCHÉ è
+fatto così e non in un altro modo, con i numeri esatti e il file dove vive.
+Ogni numero è riproducibile dal repo e vive in `figures/`. Le domande difficili
+con le risposte sono in fondo (§16). Il pitch da 60 secondi è qui sotto.*
 
 ---
 
-## 2. Pipeline walkthrough (what runs, in order, and why)
+## 0. Il pitch di 60 secondi
+
+> D&D 5e misura la difficoltà dei mostri con il Challenge Rating, un'euristica
+> di design mai validata contro il gioco reale. Noi la sostituiamo con una
+> stima **empirica e calibrata di P(il party vince | incontro)**, appresa da
+> **34.907 combattimenti reali** (dataset FIREBALL, partite vere su Discord).
+> Il modello è un **XGBoost con 45 vincoli monotoni, calibrato con Platt**, su
+> 45 feature di matematica del combattimento, validato con **cross-validation
+> raggruppata per campagna** (holdout AUC 0.657 [0.638, 0.674], CV 0.601 ±
+> 0.040). Dalla probabilità calibrata deriviamo il prodotto: il *True
+> Lethality Level*, il livello a cui un party bilanciato di 4 raggiunge il
+> tasso di vittoria target, trovato per ricerca binaria. La statistica
+> interessante sta in ciò che i dati **non possono** dire: i DM curano gli
+> scontri e "perdonano" quelli senza speranza, contaminando esattamente la
+> regione che il prodotto interroga. Perciò il modello servito è avvolto in
+> tre guardie di dominio esplicite, l'ultima calibrata su **490.640 battaglie
+> simulate** con un motore Monte Carlo esterno (Battlecast).
+
+La tesi del progetto in una frase: **un modello può essere giusto sui dati e
+sbagliato sulla domanda; il lavoro statistico è accorgersene e correggere con
+lo strumento adatto** (vincoli, guardie, simulazione), non con più dati uguali.
+
+---
+
+## 1. Il problema e l'estimand
+
+**Il sistema ufficiale.** Ogni mostro ha un Challenge Rating (CR, da 0 a 30):
+"un mostro CR 5 è una sfida equa per quattro eroi di livello 5". Il manuale del
+DM (DMG p.82) stima la difficoltà di un incontro così: somma gli XP dei mostri,
+applica un moltiplicatore per il loro numero, confronta con soglie per livello.
+Il CR è un'intenzione di design: **nessuno l'ha mai validato contro partite
+giocate**. Questo è il gap che il progetto attacca.
+
+**La nostra domanda è un estimand, non uno score.** Non chiediamo "che voto
+diamo al mostro" ma: η(x) = P(party vince | incontro x), **calibrata**. Poi la
+invertiamo: il *True Lethality Level* è il livello del party a cui η supera un
+target (default 65%, regolabile dall'utente — "equo" è una **policy**, non una
+costante di natura). Due conseguenze progettuali:
+
+1. Tutto a valle consuma **probabilità**, quindi la calibrazione è un
+   requisito di prima classe, non un abbellimento. Per questo la metrica
+   primaria dichiarata è il **Brier score**, non l'AUC.
+2. Ai bordi diamo **verdetti** invece di precisione finta: `trivial` (vince ≥
+   target già a livello 1), `beyond_deadly` (sotto target anche a livello 20),
+   `ok` (il target viene attraversato dentro [1, 20]).
+
+**Perché "e se combattessero fino alla morte?"** L'app risponde a una domanda
+controfattuale/interventista ("questo mostro, contro questo party, chi vince
+se nessuno si tira indietro?"), mentre i log rispondono a una domanda
+osservazionale ("cosa è successo ai tavoli reali?"). Questa distinzione —
+estimand mismatch — è il filo rosso dell'intero progetto (§9, §10).
+
+---
+
+## 2. Glossario D&D minimo (per chi di noi non gioca)
+
+- **Party**: la squadra di eroi, 3–6 personaggi di livello 1–20.
+- **HP** (hit points): quanti danni assorbi prima di cadere.
+- **AC** (armor class): quanto è difficile colpirti — un attacco colpisce se
+  d20 + bonus di attacco ≥ AC.
+- **DPR** (damage per round): danno medio inflitto per round, misura del
+  danno *sostenuto*.
+- **Burst**: la singola azione più pericolosa (es. Power Word Kill del Lich,
+  il soffio del drago) — misura del danno *esplosivo*, diversa dal DPR.
+- **Save DC**: la difficoltà di resistere agli effetti (incantesimi, veleni).
+- **Legendary**: i boss hanno azioni e resistenze extra fuori dal loro turno —
+  di fatto più HP e più azioni effettive.
+- **Ruoli del party** (come li mappiamo noi): *healer* (Cleric/Druid/Bard),
+  *tank* (Barbarian/Fighter/Paladin), *arcane* (Wizard/Sorcerer/Warlock),
+  *martial DPS* (Rogue/Monk/Ranger). Nel modello sono 4 flag binari.
+- **Action economy**: chi ha più azioni per round vince le guerre di
+  logoramento — 4 eroi contro 1 boss = 4 azioni contro ~1–3. È il motivo
+  strutturale per cui i boss solitari deludono e gli sciami sorprendono.
+- **TPK** (total party kill): il party viene sterminato.
+- **DM mercy**: il DM che "perdona" — dadi aggiustati, ritirate concesse,
+  rinforzi narrativi. Centrale nel §9.
+
+---
+
+## 3. Il dataset: FIREBALL (e come lo trasformiamo)
+
+**Cos'è.** FIREBALL (Zhu et al., ACL 2023) raccoglie log strutturati di
+partite vere giocate su Discord tramite il bot Avrae: ogni riga è uno
+snapshot di un turno di combattimento con lo stato del gioco (attori, HP,
+livelli, mostri). Non è un sondaggio né una simulazione: è gioco reale, con
+tutto il suo rumore.
+
+**La pipeline ETL (`parse_fireball.py`), passo per passo:**
+
+1. **Input**: 1.471 file JSONL (~1.9 GB), uno per "campagna" (il log di un
+   server Discord) → 153.829 snapshot di turni.
+2. **Ricostruzione degli incontri**: i turni vengono raggruppati in
+   combattimenti; 134.475 turni appartengono a combattimenti ben formati.
+3. **Etichettatura dall'HP terminale**: un incontro è *Party Win* se lo stato
+   finale mostra i mostri a 0 HP / rimossi e il party in piedi. Gli incontri
+   **irrisolti** (il log si interrompe, nessuno stato terminale) vengono
+   scartati: −85.778 righe. Chi non matcha il bestiario: −9.215.
+4. **Aggregazione a livello di incontro**: da righe-turno a UNA riga per
+   incontro. Le statistiche dei mostri si aggregano **esattamente come al
+   serving** (stessa funzione, `roster_monster_fields`): medie pesate per
+   conteggio per le statistiche continue (CR, HP, AC, taglia...), **massimi**
+   per i flag binari e per le minacce apicali (max CR, max burst, max save
+   DC), **somme** per i totali della corsa al danno (HP totali, DPR totale,
+   XP totali).
+5. **Sanificazione**: livelli del party clippati a [1, 20], roster a ≤ 30
+   mostri (oltre è quasi certamente un errore di log).
+6. **Output**: `clean_aggregated_combat_data.csv` — **34.907 incontri**,
+   **1.462 campagne**, 29 colonne raw.
+
+**I due numeri da ricordare:**
+- **Base rate 83.0%**: il party vince l'83% degli incontri registrati. I DM
+  curano gli scontri e i giocatori si ritirano da quelli persi → i mostri
+  deboli saturano vicino al soffitto a ogni livello. Conseguenza: verdetti ai
+  bordi, slider del target, e attenzione maniacale alla calibrazione.
+- **1.462 campagne = 1.462 gruppi di leakage**: incontri della stessa
+  campagna condividono party, DM e house rules. È l'unità di scambiabilità
+  (§8).
+
+**Domanda tipica — "perché scartate 86k righe invece di imputarle?"**
+Perché l'esito mancante non è MCAR: i combattimenti irrisolti sono
+sistematicamente diversi (interrotti, fuori dal bot, abbandonati). Imputare
+l'esito significherebbe inventare la variabile risposta. Meglio meno righe
+oneste che più righe inquinate.
+
+---
+
+## 4. I dati dei mostri e il parsing dell'offesa
+
+**Il problema dell'Attack Potency.** Il bestiario (foglio ufficiale, 802
+righe, 762 mostri servibili con statistiche complete) elenca HP, AC, taglia,
+attributi — ma **niente su quanto forte colpisce**. Un modello di esito del
+combattimento senza il danno del mostro è mezzo cieco. Soluzione in
+`monster_offense.py`:
+
+1. **Parsing per-azione degli statblock SRD** (JSON con HTML delle azioni):
+   ogni azione viene analizzata separatamente — bonus di attacco, danno medio
+   dalle espressioni dei dadi (es. `2d8+4` → 13), save DC. La segmentazione
+   per azione è importante: il vecchio regex "pooled" su tutto il blocco
+   gonfiava il DPR dei draghi del ~60% sommando pezzi di azioni diverse.
+2. **DPR sostenuto vs burst**: il DPR prende l'output ripetibile round per
+   round; il **burst** prende la singola azione più letale (soffio, spell
+   apicale). Sono feature diverse perché minacciano in modo diverso: il DPR
+   vince le guerre di logoramento, il burst elimina un personaggio dal nulla
+   (`burst_vs_pc_hp` è top-3 SHAP).
+3. **Alternative "or"**: "melee or ranged attack..." → si prende il **max**
+   delle alternative, non la somma (bug delle armi versatili: 24 mostri
+   raddoppiavano il danno).
+4. **Liste di incantesimi**: gli spellcaster spesso non hanno azioni di danno
+   nel blocco ma una lista di spell. Una tabella di **30 incantesimi** con
+   danno medio da PHB la prezza (il casting sostenuto è cappato alla classe
+   fireball ≈ 45). Il Lich esce con DPR 45 e burst 100 (Power Word Kill).
+5. **Fallback + clamp di sanità**: 321 mostri hanno offesa parsata dal
+   statblock (badge 🎯 nell'app), 441 usano la tabella di design del DMG
+   p.274 per CR (badge 📐). Ogni valore parsato è clampato in
+   [0.25×, 3×] della banda DMG del suo CR: un errore di regex non può
+   produrre un goblin da 500 danni.
+6. **Tratti**: un estrattore canonico unico (`extract_official_traits`,
+   usato sia dall'ETL che dall'app — una sola fonte di verità) legge
+   resistenze fisiche, immunità al crowd-control, resistenza magica, pack
+   tactics, spellcasting, rigenerazione, legendary, mobilità.
+
+---
+
+## 5. Il feature engineering (29 colonne raw → 45 feature)
+
+Vive in `DnDFeatureEngineer` (`initial_learn.py`), un transformer sklearn
+**dentro la pipeline picklata**: chi chiama `predict` passa righe raw e la
+trasformazione è identica in training e serving per costruzione.
+
+**Il modello del party** (il party nei log è descritto solo da livello,
+taglia e ruoli — le sue statistiche vanno modellate):
+- proficiency = 2 + ⌊(livello−1)/4⌋ (la vera scala 5e)
+- bonus di attacco = proficiency + 3 + livello/8
+- AC = 14 + livello/4 + 1 se c'è il tank
+- DPR per membro = 3 + 1.9·livello (~5 al lv 1, ~12 al 5 con Extra Attack,
+  ~24 all'11, ~41 al 20)
+- HP per membro = 4.5 + 5.5·livello; il pool totale ×1.25 se c'è un healer
+
+**Le probabilità di colpire** (in entrambe le direzioni):
+`hit = clip((21 + bonus_attacco − AC_bersaglio)/20, 0.05, 0.95)` — la
+matematica del d20 (serve 21−bonus per colpire AC), con i bordi 5%/95% che
+sono le regole reali (1 naturale manca sempre, 20 naturale colpisce sempre).
+
+**Gli HP effettivi del mostro** (mitigazione → HP virtuali):
+`eHP = HP_totali × (1 + 0.40·res_fisica + 0.30·legendary + 0.25·rigenerazione)`.
+Il DPR effettivo del mostro: `DPR_totale × hit × (1 + 0.4·pack_tactics)`
+(pack tactics ≈ vantaggio ≈ +40% di hit rate).
+
+**Le feature della corsa al danno** — il cuore del progetto:
+- `rounds_to_kill_party` = HP party / DPR effettivo mostri (clip a 50)
+- `rounds_to_kill_monster` = eHP mostri / (DPR party × hit) (clip a 50; la
+  versione **non clippata** esiste come colonna extra per la guardia, §10)
+- `lethality_log_ratio` = log del rapporto tra i due (clip ±4) — ">0 = il
+  party vince la corsa", probabilmente la quantità più informativa di 5e
+- `save_dc_pressure` = max save DC − (12 + livello/4), clip [−10, 15]
+- `action_economy_ratio` = n mostri / taglia party, clip [0, 10]
+- `burst_vs_pc_hp` = max burst / HP di un singolo PC, clip [0, 10] — ">1 =
+  un'azione può eliminare un personaggio da piena salute"
+- feature di budget XP ufficiali: `xp_budget_ratio` = XP aggiustati / soglia
+  deadly del party (il modello può *vedere* cosa direbbe il manuale)
+
+**Il clipping come guardia OOD**: prima di tutto, gli input raw vengono
+riportati nelle bande legali di 5e (AC 10–30, HP medi 1–1000 e totali
+1–8000, DPR 0.5–350 medio / 0.5–1500 totale, atk 0–20, DC 8–30, burst
+0.5–400, attributi 60–250, taglia 1–6). Un mostro homebrew da 10.000 HP entra
+nella regione dove gli alberi hanno dati invece di finire su foglie mai
+allenate. Essendo dentro il transformer, il clipping è identico ovunque.
+
+**SHAP conferma la teoria del gioco** (`figures/shap_ranking.csv`, top 5 per
+|contributo| medio): `avg_party_level` 0.22, `avg_monster_size_num` 0.201,
+`burst_vs_pc_hp` 0.187, `num_monsters_total` 0.165, `party_hit_chance` 0.116.
+Livello, taglia, burst, action economy, matematica del d20: il modello ha
+imparato il gioco, non artefatti.
+
+---
+
+## 6. Il modello: XGBoost con 45 vincoli monotoni
+
+**Perché gradient boosting su alberi**: dati tabulari eterogenei (conteggi,
+flag, rapporti), interazioni non lineari attese (il burst conta di più a
+livelli bassi), robustezza a scale diverse, e soprattutto il supporto nativo
+ai **vincoli di monotonia**.
+
+**I vincoli sono la scelta di modellazione più importante.** Tutte e 45 le
+feature hanno un segno imposto (nessuna a 0):
+- **10 positivi** (più X ⇒ P(win) mai più bassa): livello e taglia del party,
+  i 4 ruoli, potere del party, hit chance del party,
+  `rounds_to_kill_party`, `lethality_log_ratio`.
+- **35 negativi** (più X ⇒ P(win) mai più alta): tutto ciò che è del mostro —
+  numero, CR, HP, AC, DPR, burst, atk, DC, flag di tratto, pressioni
+  derivate, `rounds_to_kill_monster`, budget XP.
+
+Doppio ruolo dei vincoli:
+1. **Prior di forma**: incodificano conoscenza di dominio certa (più mostri
+   non aiutano MAI il party), riducendo la varianza.
+2. **Storia OOD**: oltre il supporto dei dati gli alberi vincolati possono
+   solo *appiattirsi nella direzione sicura*, mai invertire. Con il clipping
+   degli input, è ciò che rende l'extrapolazione degradare con grazia.
+
+**Iperparametri** (Optuna, studio persistito su SQLite — riprendibile, non
+rigiocato a mano): 300 alberi, profondità 4, learning rate 0.149,
+min_child_weight 7, subsample 0.678, colsample_bytree 0.853, λ=0.105,
+α=0.091, γ=0.009. Da notare la profondità 4: la CV raggruppata premia modelli
+piccoli — alberi profondi imparano le campagne, non il combattimento.
+
+**Riaddestrare**: `make retrain` (dati → training → 64 test → 13 assiomi).
+`initial_learn.py --no-tune` riusa i parametri da `figures/metrics.json`.
+
+---
+
+## 7. La calibrazione (e il fallimento istruttivo dell'isotonica)
+
+**Perché calibrare**: il boosting ottimizza il ranking, ma il prodotto
+consuma probabilità (la ricerca binaria cerca "il livello dove P=0.65").
+
+**Come**: `CalibratedClassifierCV` con metodo **sigmoid (Platt)** — una
+regressione logistica a 2 parametri sull'output del modello base, appresa su
+predizioni out-of-fold. I fold sono **StratifiedGroupKFold(3, seed 42)
+raggruppati per campagna**, passati come indici posizionali precalcolati (gli
+indici restano validi perché la pipeline preserva l'ordine delle righe): il
+modello base e il calibratore non vedono mai la stessa campagna. Senza
+questo, il leakage rientrerebbe proprio dalla porta della calibrazione.
+
+**Perché NON isotonica** (domanda quasi certa): l'isotonica è una funzione a
+gradini. Sul nostro dominio produceva **solo 14 valori distinti di
+probabilità** sull'intera griglia dei livelli 1–20: la ricerca binaria
+atterrava sempre sui bordi dei plateau e **1 Lich e 2 Lich ricevevano lo
+stesso livello**. In più misurava anche peggio (Brier 0.1397 contro 0.1394
+della sigmoide). Lezione da esame: la scelta del calibratore non è solo una
+questione di score — la *forma funzionale* deve essere compatibile con l'uso
+a valle (qui: invertibilità liscia). La suite comportamentale ha un check
+apposito ("curve not a staircase": ≥30 valori distinti sulla griglia).
+
+**Lettura della curva di calibrazione** (`figures/calibration_curve.png`):
+aderente alla diagonale dove vive la massa dei dati (0.8–0.9), lieve
+sovraconfidenza nei bin bassi (pochi esempi → stima empirica rumorosa).
+
+---
+
+## 8. La valutazione onesta (leakage, split, metriche, bootstrap)
+
+**Il meccanismo del leakage** (da sapere spiegare a memoria): incontri della
+stessa campagna condividono party, DM, house rules e stile. Con split casuali
+riga per riga, il modello vede in training incontri quasi identici a quelli
+di test e "predice" riconoscendo l'impronta della campagna, non valutando il
+combattimento. Il numero risultante è gonfiato e non trasferisce a campagne
+nuove — che è l'unico caso d'uso reale dell'app.
+
+**Il rimedio**: la campagna è il gruppo, ovunque.
+- Split finale: `GroupShuffleSplit` (seed 42) → 27.502 train / 7.106 test,
+  campagne disgiunte.
+- Model selection: `StratifiedGroupKFold` → CV **0.601 ± 0.040**.
+- Perfino i fold della calibrazione (§7) sono raggruppati.
+
+**Le due differenze da non confondere** (Room 13 del deck):
+1. CV raggruppata 0.601 vs holdout raggruppato 0.657: **non è leakage** —
+   sono entrambi onesti; differiscono perché la CV allena su 4/5 dei dati e
+   la varianza tra campagne è alta (±0.040); 0.657 è a ~1.4 σ dalla media.
+2. Numeri raggruppati vs numeri con split casuale: **questo è il leakage**.
+   Non stampiamo la cifra naive in vetrina (è un numero senza significato per
+   il caso d'uso); è riproducibile cambiando splitter. "Reported, not
+   shipped."
+
+**Le metriche di holdout** (7.106 incontri di campagne mai viste):
+- ROC-AUC **0.657** [0.638, 0.674]
+- Brier **0.139** [0.134, 0.145] ← metrica primaria dichiarata
+- PR-AUC **0.874** — attenzione: con positivi all'83%, la baseline della
+  PR-AUC è ≈ 0.83, quindi è un miglioramento modesto e onesto (trabocchetto
+  classico: "perché la PR-AUC è così alta?" → baseline diverse)
+- log-loss 0.447, accuracy 0.825 (vicina al base rate 0.830: normale — il
+  valore del modello è il ranking e la calibrazione, non superare una
+  baseline degenerata sulla classe maggioritaria)
+
+**I CI**: bootstrap percentile, 2.000 ricampionamenti del test set, resample
+degeneri (una sola classe) scartati.
+
+**"AUC 0.66 è poco"** — risposta in tre punti: (a) dadi, tattiche e oggetti
+magici non registrati sono rumore irriducibile per le feature; (b) la
+baseline cieca "vince sempre il party" ha già l'83% di accuratezza, il
+margine strutturale è stretto; (c) al prodotto serve ordinare gli incontri e
+produrre probabilità calibrate, e 0.66 di AUC con Brier 0.139 lo fa.
+
+**MMD come sanity check dello split** (§13): nessun covariate shift tra
+train e holdout → il gap CV/holdout è varianza degli esiti, non shift delle
+feature. Lo split design regge.
+
+---
+
+## 9. La scoperta centrale: DM mercy = estimand mismatch
+
+**Il sintomo**: un primo modello valutava **19 Lich (CR 21) battibili da un
+party di livello 8**. Assurdo per chiunque conosca il gioco.
+
+**La diagnosi** (il bug era nel mondo, non nel codice): filtrando i log sugli
+scontri che la matematica deterministica del danno dichiara senza speranza
+(party eliminato in ≤1 round), scopriamo che risultano "vinti"
+**l'84.5% delle volte** (659 righe). DM che aggiustano i dadi, ritirate
+registrate come vittorie, rinforzi narrativi. Il modello imparava
+fedelmente i dati — che però rispondono a "cosa succede ai tavoli", non a
+"cosa succede combattendo fino alla morte".
+
+**Perché non si risolve con più dati**: qualsiasi dato raccolto allo stesso
+modo porta la stessa contaminazione, perché è generato dallo stesso processo
+(la curatela del DM). Serve o (a) un'informazione esterna con l'estimand
+giusto — la simulazione — o (b) etichette esplicite di ritirata/fudge (nei
+"prossimi passi"). Da qui le guardie.
+
+---
+
+## 10. Le tre guardie (in ordine di applicazione)
+
+Applicate in `predict_win_for_parties`, deterministic e testate:
+clipping (dentro il transformer) → modello → dominanza → cap.
+
+**Guardia 1 — prior di forma + clipping** (§5–6): extrapolazione
+impossibile da imparare ⇒ vincolata. Il mostro-dio da 10.000 HP/AC 50/DPR 999
+passa per il flusso reale dell'app e esce `beyond_deadly`, senza crash.
+
+**Guardia 2 — dominanza del roster**: le medie pesate diluiscono. Lich + 2
+Ogre + 6 Goblin ha CR medio 2.94 mentre il Lich da solo è CR 21 → il modello
+grezzo valutava lo scontro PIÙ GRANDE più facile (livello 3.25 contro 5.0).
+Fix: si valuta il roster completo E ogni sotto-roster omogeneo, e si serve il
+**minimo** elementwise di P(win). Assioma: aggiungere mostri non può mai
+aiutare il party. È un min su predizioni monotone ⇒ resta monotono.
+
+**Guardia 3 — il cap di deathmatch (v3, ibrido)**. La formula servita:
 
 ```
-FIREBALL logs (raw, immutable)                 srd_5e_monsters.json (raw)
-        │                                              │
-        │  parse_fireball.py                           │  monster_offense.py
-        │  · per-turn JSON → encounter-level rows      │  · regex-parse real statblocks:
-        │  · outcome labels from HP strings            │    DPR, attack bonus, save DC,
-        │  · roster aggregation: weighted means,       │    burst/nova (breath, spells)
-        │    maxima for flags, sums for totals         │  · DMG p.274 fallback by CR
-        ▼                                              ▼
-clean_aggregated_combat_data.csv  ←──────  monster_offense_stats.csv
-        │
-        │  initial_learn.py
-        │  · DnDFeatureEngineer (in-pipeline, serialized): hit-chance geometry,
-        │    time-to-kill ratio, XP budget × DMG multiplier, trait interactions
-        │  · Optuna tuning under StratifiedGroupKFold (study persisted, SQLite)
-        │  · CalibratedClassifierCV (sigmoid/Platt, group-aware folds)
-        │  · bootstrap 95% CIs; run appended to figures/experiments.jsonl
-        ▼
-true_lethality_model.pkl  (+ version-portable native JSON booster)
-        │
-        │  lethality_engine.py  (single inference core for app + CLI)
-        │  · binary search for the target-win-rate level
-        │  · 3 guards: monotone/OOD-clipping · roster dominance · survival physics
-        │  · by-the-book DMG p.82 estimate for an honest comparison column
-        ▼
-app.py (Streamlit) / fair_fight_finder.py (CLI)
-
-Quality gates:  tests/ (61 pytest)  +  behavior_suite.py (13 domain axioms)
-Experiments:    model_comparison.py (course benchmark) · gan_ablation.py
+P(win) ≤ min( σ(0.1924·s − 2.0856·ln(k) + 4.1217),  Λ(CR, count, level) )
 ```
 
-One command reproduces everything: **`make retrain`** (data → train → tests → behavior suite).
+- `s` = round che il party sopravvive; `k` = round che servono per uccidere
+  il roster, **non clippato** (la feature del modello si ferma a 50; per la
+  guardia un muro da 10.000 HP deve valere ~350 round, non 50 — per questo il
+  transformer espone la colonna extra `rounds_to_kill_monster_raw`).
+- Il termine di sopravvivenza cattura i wipe rapidi; il termine −ln(k)
+  cattura le **sconfitte per logoramento**. I vincoli di segno (A ≥ 0, C ≥ 0)
+  rendono il cap dimostrabilmente crescente nel livello e decrescente nel
+  numero di mostri ⇒ ricerca binaria e dominanza sopravvivono.
+- Fit: logistica **pesata binomialmente** (ogni cella entra con peso pari ai
+  trial vinti/persi ⇒ vera massima verosimiglianza su ~408k esiti binari)
+  sulle griglie guard+OOD (204 celle), ricostruite con **gli stessi profili
+  del bestiario che l'app serve** (v. storia sotto).
+- **Λ, il lattice**: due feature di TTK non distinguono un Lich da un sacco
+  di punti ferita (le rotazioni di spell e l'AoE non sono prezzate dalla
+  matematica del danno). Quindi dove la verità simulata ESISTE, la serviamo
+  direttamente: interpolazione trilineare delle P(win) simulate sulla griglia
+  dei boss (CR {2,5,10,15,21} × count {1,2,4,8,12,19} × level
+  {1,5,9,13,17,20}), resa monotona in fase di build (cummax sul livello,
+  cummin su count e CR — solo abbassamenti: il cap non può allentarsi), con
+  **astensione sotto CR 2** (i mostri deboli non sono mai stati il bug;
+  clampare un goblin alla riga CR 2 strangolerebbe incontri normali). File:
+  `battlecast_bridge/guard_lattice.json`. Sulle celle della griglia il numero
+  servito È quello simulato (1 Lich, livello 9: 0.282 da entrambe le parti).
 
----
+**La storia delle versioni** (ottima da raccontare, mostra il metodo):
+- **v1** a mano: σ(2.197·s − 4.394), ancore 10/50/90% a 1/2/3 round di
+  sopravvivenza. "Una costante a mano è una confessione."
+- **v2** primo fit Battlecast: σ(1.6302·s − 3.9771) — meglio (9/33/71%), ma
+  ancora **solo sopravvivenza**: contro 1 Lich un party di livello 5
+  "sopravvive" 4+ round stimati ⇒ cap 0.95, mentre il simulatore dà 0.000 su
+  2.000 deathmatch. In più il fit era calibrato su profili ricostruiti male
+  (solo HP/AC con offesa da tabella DMG ⇒ spazio delle feature che il serving
+  non produce mai). Risultato assurdo in produzione: 1 Lich "fair" a 3.25.
+- **v3** (attuale): race cap + lattice, fit su profili serving-consistenti.
 
-## 3. The decisions an examiner will probe — and the defense
+**Il ladder del Lich, prima e dopo, contro il simulatore:**
 
-### 3.1 "Why grouped cross-validation?"
-Encounters from the same campaign share party, DM and house rules. Random splits
-put siblings in train *and* test → optimistic metrics. We group by campaign
-(`StratifiedGroupKFold` / `GroupShuffleSplit` on the source-log ID) at **every**
-stage — tuning, model selection, holdout, *and calibration folds*. Random-split
-numbers are visibly higher; **that gap is measured leakage, not performance.**
-
-### 3.2 "Your AUC is only 0.65. Is the model any good?"
-Three answers. (a) It's an *honest* 0.65 — on unseen campaigns, with a bootstrap
-CI [0.638, 0.674] that excludes 0.5 decisively. (b) The label is intrinsically
-noisy: outcomes are inferred from chat-log HP strings, and the DM's hidden
-adjustments are irreducible noise — the Bayes error here is high. (c) The product
-consumes *calibrated probabilities*, not rankings: Brier 0.139 [0.134, 0.145]
-and a near-diagonal reliability curve are the metrics that matter, and both are
-reported per run in `figures/experiments.jsonl`.
-
-### 3.3 "Why XGBoost? Did you try simpler models?" ⭐ the best story
-Yes — and the simple model *won the metric and lost the job*. Under identical
-grouped CV (`model_comparison.py`):
-
-| Model | grouped-CV AUC | Brier |
-|---|---|---|
-| Ridge logistic (ERM + ℓ2) | **0.657 ± 0.031** | **0.136** |
-| RFF kernel logistic (Rahimi–Recht) | 0.624 ± 0.013 | 0.142 |
-| Monotone XGBoost (production) | 0.614 ± 0.033 | 0.141 |
-
-We promoted the logistic — and it rated **8 Liches as trivial** and a 10,000-HP
-monster as beatable. Cause: *DM-curation confounding*. In real logs, fights with
-many monsters are mostly weak mobs that parties beat, so the unconstrained
-monster-count coefficient comes out **positive**. The app asks **interventional**
-questions ("same monster, more of them"), not observational ones; only the
-monotone-constrained model answers them sanely. We accepted ~0.04 AUC for
-decision-grade counterfactuals — prediction ≠ decision. (Constraints are 45
-signed priors: party level ↑ ⇒ P(win) never ↓; enemy DPR ↑ ⇒ never ↑.)
-
-### 3.4 "Why Platt (sigmoid) and not isotonic calibration?"
-Isotonic produces a piecewise-constant map: the win-probability curve became a
-staircase, and the binary search collapsed distinct encounters onto the same
-plateau edge (1 Lich and 2 Liches got identical levels). Sigmoid is smooth,
-strictly monotone, **and** measured slightly better (Brier 0.1394 vs 0.1397).
-Calibration folds are group-aware for the same leakage reason as everywhere else.
-
-### 3.5 "What are the three guards, and why are they legitimate?"
-The model interpolates the data; the guards handle where data cannot go:
-1. **OOD clipping + monotone constraints** — inputs snapped to legal 5e bands;
-   extrapolation direction forced by domain priors (a 10,000-HP homebrew
-   degrades gracefully to "beyond deadly").
-2. **Roster dominance** — count-weighted averages dilute (Lich + 6 goblins has
-   a lower avg CR than the Lich alone). Axiom: adding monsters can never make
-   the fight easier ⇒ score every homogeneous sub-roster, take the min.
-3. **Survival physics** — the key discovery: in fights where deterministic
-   combat math says the party dies in ≤1 round, the logs still show **84.5%
-   wins** — *DM mercy* (fudged dice, retreats, rescues). No model trained on
-   that can answer "fight 19 Liches to the death". The guard caps
-   P(win) ≤ σ(2.197·TTK_party − 4.394): 1 round ⇒ ≤10%, 2 ⇒ ≤50%, 3 ⇒ ≤90%,
-   inert (>99.8%) wherever the party survives 5+ rounds — i.e. wherever the
-   data is trustworthy. It's a declared, tested modeling assumption — a prior
-   over a region with no usable data — not a learned parameter.
-
-### 3.6 "The data is 83% wins. Did you rebalance?" ⭐ second-best story
-We tested it properly (`gan_ablation.py`, leakage-clean: CTGAN fits only on
-training-campaign losses; both variants evaluated on the same real held-out
-campaigns):
-
-| Training data | AUC | Brier | mean p̂ vs true base rate |
+| Lich | v2 (sbagliato) | v3 (ora) | Battlecast (crossing 65%) |
 |---|---|---|---|
-| Real only (production) | **0.657** | **0.139** | 0.83 vs 0.82 ✓ |
-| Real + CTGAN synthetic losses | 0.638 | 0.186 | 0.61 vs 0.82 ✗ |
+| 1 | 3.25 | **11.0** | ≈ 11 |
+| 2 | 6.75 | **16.5** | ≈ 16.5 |
+| 4 | 12.75 | beyond deadly (7% a lv 20) | 7% a lv 20 |
+| 8+ | beyond deadly (9% a lv 20) | beyond deadly (**0.0%**) | 0.0% |
 
-Balancing shifts the training prior to ~45%, deflating every probability by
-~20 points — calibration destroyed, and discrimination *also* dropped. Class
-imbalance is a property of reality here, not a defect: the base rate IS the
-signal that DMs curate encounters. (Course link: ERM with the log-loss is a
-proper scoring rule — it estimates P(y|x) under the *training* distribution;
-change that distribution and you change what you estimate.)
-
-### 3.7 "Is there distribution shift between train and test campaigns?"
-Tested with a kernel two-sample test (unbiased MMD², RBF kernel, median
-heuristic, permutation null): MMD² = 0.0003, p ≈ 0.14 → **no detectable
-covariate shift**. So the grouped-CV/holdout gap is campaign-level *outcome*
-variance (party skill, DM style), not feature shift — which is precisely the
-random effect that grouping controls for.
-
-### 3.8 "Where do kernels and GPs appear?" (course toolbox)
-- **RFF kernel logistic** (§3.3): a Mercer-kernel machine made scalable to
-  n≈28k with Random Fourier Features — exact kernel methods are O(n²–n³).
-- **MMD test** (§3.7).
-- **GP regression** for the secondary CR-predictor task (n=797 official
-  monsters — exactly GP-sized): RBF+White kernel, marginal-likelihood fitting;
-  beats XGBoost (MAE 0.88 vs 0.90) and its 95% predictive intervals achieve
-  **0.95 empirical coverage** — calibrated uncertainty, verified.
-
-### 3.9 "How do you know the *code* is right, not just the metrics?"
-Two test layers: 61 pytest unit tests (statblock parsing regexes, feature math,
-DMG book math, the physics guard) and `behavior_suite.py` — 13 behavioral
-axioms the served model must satisfy (level monotonicity, count monotonicity,
-roster dominance, tier ordering, boundary verdicts, OOD via the real app flow).
-The behavior suite exists because a model once *passed all metrics and failed
-all of these* (§3.3).
+**Perché guardie e non più dati** (carta della slide): ogni guardia blocca un
+fallimento che nessun dato raccolto allo stesso modo può correggere —
+extrapolazione (là fuori i dati non esistono), diluizione da aggregazione
+(artefatto della nostra featurizzazione), estimand mismatch (i log rispondono
+a un'altra domanda). Prima la diagnosi, poi lo strumento giusto.
 
 ---
 
-## 4. Key numbers to memorize
+## 11. Battlecast: la simulazione come verità esterna
 
-| Quantity | Value |
-|---|---|
-| Encounters / campaigns | 34,907 / 1,462 |
-| Base rate P(win) | 0.83 |
-| Holdout AUC (grouped) | **0.657** [0.638, 0.674] |
-| Grouped 4-fold CV AUC | 0.608 ± 0.043 |
-| Brier / log-loss | 0.139 [0.134, 0.145] / 0.447 |
-| Ridge logistic CV AUC (rejected anyway) | 0.657 |
-| GAN-balanced: Brier / mean p̂ | 0.186 / 0.61 (vs 0.82 true) |
-| MMD² campaign shift | 0.0003, p ≈ 0.14 (no shift) |
-| GP CR predictor | MAE 0.88, R² 0.95, coverage 0.95 |
-| DM mercy (hopeless fights won) | 84.5% |
-| Top SHAP features | party level, monster DPR, burst/PC-HP, action economy |
-| XGBoost (Optuna) | 300 trees, depth 4, lr 0.149, subsample 0.68 |
+**Cos'è**: battlecast.gg, un simulatore Monte Carlo di combattimenti 5e —
+iniziativa, movimento su griglia, slot incantesimo, condizioni, gioco
+scriptato "ottimale", **zero misericordia**. Ne abbiamo vendorizzato i tre
+asset pubblici (motore invariato) per girare in locale, riproducibile, senza
+carico sul servizio: crediti e caveat in `battlecast_bridge/PROVENANCE.md`
+(file da NON toccare — è l'attribuzione).
 
----
+**Le tre griglie disegnate** (304 celle, **490.640 battaglie** in totale;
+fino a 2.000 trial per cella — il driver riduce adattivamente per i roster
+più grandi; a 2.000 trial l'errore standard della stima è ≤ 0.011):
+- **guard** (180 celle): boss {Ankheg CR 2, Air Elemental CR 5, Aboleth CR
+  10, Purple Worm CR 15, Lich CR 21} × count {1,2,4,8,12,19} × livello
+  {1,5,9,13,17,20} → calibra la guardia (fit + lattice).
+- **mercy** (100 celle): 25 mostri SRD, CR 0–10, singolo mostro × livelli
+  {3,7,11,15} → quantifica la misericordia (§12). È uno sweep sistematico,
+  NON un replay di incontri loggati.
+- **OOD** (24 celle): cloni con HP ×{1,5,20} e AC +{0,8} → valida i verdetti
+  fuori distribuzione e popola l'angolo "sopravvivi per sempre, non uccidi
+  mai" del fit.
+- Party fisso: Fighter/Cleric/Wizard/Rogue ai livelli richiesti. Comando:
+  `make battlecast` (~15 min). I pareggi/stalli contano come non-vittorie,
+  coerente con l'etichetta di training.
 
-## 5. Live demo script (2 minutes)
-
-1. **Official tab → Lich** — point at the banner: *"DPR 45, burst 100: parsed
-   from the real statblock text; burst 100 is Power Word Kill found by scanning
-   the spell list."*
-2. **Calculate** — the three metrics: book CR 21, True Lethality Level ~3–4
-   with its exact win %, the P(win) 1→20 range. *"The discrepancy is the
-   thesis: real parties beat liches far below CR 21."*
-3. **Set count to 6** — the book column now shows the **DMG-adjusted CR** with
-   the ×-multiplier arithmetic; the model's level rises monotonically.
-4. **Set count to 19** — *"beyond deadly": the survival-physics guard, because
-   the data here is DM-mercy-contaminated.*
-5. **Sidebar** — model card (honest grouped metrics) and the target-win-rate
-   slider (*"the product is a threshold on a calibrated probability"*).
-6. **Encounter Builder** — Lich + 6 goblins: dominance guard keeps it at least
-   as hard as the Lich alone despite diluted averages.
+**I due caveat dichiarati** (nel report, nelle slide e nei limiti):
+1. **Gap di edizione**: Battlecast gioca le regole 2024-SRD (317 statblock),
+   i nostri log e il bestiario sono 2014. Esempio concreto: il Lich simulato
+   ha 315 HP / AC 20, quello che l'app serve 135 / 17. La calibrazione
+   assorbe il gap dichiarandolo.
+2. **Gioco scriptato con build ottimizzate** ⇒ i tassi di vittoria simulati
+   sono un **upper bound** sulla prestazione dei tavoli reali.
 
 ---
 
-## 6. Honest limitations (say them before they're asked)
+## 12. La misericordia quantificata + validazione OOD
 
-- **Selection bias is the elephant**: we observe *played* fights, curated by
-  DMs. P(win) is "probability at a real table", not "probability in a fight to
-  the death" — the physics guard patches the worst region, it doesn't fix the
-  estimand.
-- **Label noise**: outcomes inferred from HP strings in chat logs; "Ongoing"
-  fights dropped; retreats and mercy are invisible.
-- **Party features are coarse** (level, size, 4 role flags — no items, feats,
-  spell lists); monster offense for non-SRD monsters is a CR-table prior.
-- **AUC 0.65 ceiling**: with these features and this label noise, we're likely
-  near the achievable Bayes error; the model ranks and calibrates, it does not
-  divine.
-- If we continued: hierarchical/mixed-effects modeling of campaigns (random
-  intercept per table), per-spell burst modeling, conformal prediction for the
-  win-probability intervals.
+Griglia mercy: stessi incontri attraverso due lenti — il nostro modello
+(realtà del tavolo) su x... anzi: x = P(win) Battlecast (deathmatch), y =
+P(win) modello (tavolo). Risultati (`figures/battlecast_mercy_gap.png`,
+`figures/battlecast_summary.json`):
+- correlazione **0.842** — le due lenti concordano sull'ordinamento;
+- il gap **si incrocia**: sui combattimenti difficili (sim < 0.5, solo 3
+  celle) il modello sta ≈ **+0.28 sopra** il simulatore → inflazione da
+  misericordia, dichiarata *direzionale* perché 3 celle sono poche; su quelli
+  facili (96 celle) sta ≈ **−0.14 sotto** → il soffitto dell'83% (ritirate ed
+  etichette rumorose);
+- il gioco curato quasi non produce battaglie senza speranza (96/100 celle
+  deathmatch-facili): il pericolo al tavolo è il logoramento, non i matchup
+  impossibili.
+
+OOD: gli estremi concordano perfettamente (cloni HP×20 vincono ≈ 0.000–0.003
+dei deathmatch = il nostro *beyond deadly*), l'ordinamento fine di mezzo è
+moderato (Spearman ρ = **0.538**). Sintesi onesta: verdetti OOD validati,
+micro-ranking oltre la risoluzione di entrambi i sistemi.
 
 ---
 
-## 7. Repo orientation (post-cleanup, every file is load-bearing)
+## 13. Il confronto con la cassetta degli attrezzi del corso
 
-| File | Role |
-|---|---|
-| `monster_offense.py` | Statblock parsing + DMG tables + canonical trait extraction |
-| `parse_fireball.py` | Raw logs → encounter dataset |
-| `initial_learn.py` | Features + training + calibration + CIs + experiment log |
-| `lethality_engine.py` | Inference core, 3 guards, DMG book math |
-| `app.py` / `fair_fight_finder.py` | Streamlit site / CLI twin |
-| `model_comparison.py` | Course benchmark (logistic, RFF, MMD, GP) |
-| `gan_trial.py` / `gan_ablation.py` | CTGAN generation / leakage-clean ablation |
-| `behavior_suite.py` + `tests/` | 13 axioms + 61 unit tests |
-| `figures/` | metrics.json, experiments.jsonl, all plots & study artifacts |
-| `Makefile` | `make retrain`, `make benchmark`, `make app`, `make help` |
+Tutto in `model_comparison.py` + `gan_ablation.py`, stessa CV raggruppata per
+ogni contendente, numeri in `figures/course_benchmark.json`:
 
-*Guides: `README.md` (English, technical) · `README_IT.md` (Italian, everything
-including game glossary) · this file (exam defense).*
+| Modello | CV AUC | CV Brier |
+|---|---|---|
+| Ridge logistic (C=0.03) | **0.655 ± 0.031** | **0.136** |
+| RFF kernel logistic | 0.624 ± 0.013 | 0.142 |
+| XGBoost vincolato (produzione) | 0.614 ± 0.033 | 0.141 |
+
+**Ridge logistic — il risultato più istruttivo del progetto.** Il modello
+LINEARE vince il rischio predittivo osservazionale (le feature di
+combat-math portano il segnale; l'albero flessibile overfitta le
+idiosincrasie di campagna — "small is the new big"; lo sweep su C era
+piatto, C=0.03 non è magico). **Eppure non è in produzione**: promosso
+sperimentalmente, valutava 8 Lich "trivial" e il mostro da 10k HP battibile.
+I coefficienti confessano il confounding (`figures/logistic_coefficients.png`):
+`num_monsters`, `total_dpr`, `burst` **positivi**, e — la pistola fumante —
+`avg_party_level` **negativo**: "i party di livello alto perdono di più",
+perché ricevono contenuto curato più difficile. Selection confounding da
+manuale, leggibile dai coefficienti. L'app fa domande **interventiste**
+("stesso mostro, più copie") e solo il modello vincolato sweepa sanamente:
+accettiamo ~0.04 di AUC in meno per comprare comportamento decision-grade.
+**Predizione ≠ decisione.**
+
+**RFF kernel logistic** (Rahimi–Recht, 500 componenti): approssima una kernel
+machine RBF a n=27k dove il kernel esatto sarebbe proibitivo; 0.624 — nessun
+vantaggio: il guadagno sta nelle feature, non nella non-linearità del bordo.
+
+**MMD two-sample test** (kernel, non biased): feature di train vs campagne
+held-out, kernel RBF con median heuristic (bandwidth 6.02), 1.500 punti per
+lato, 200 permutazioni. MMD² osservato = 0.00031 < soglia 95% del null =
+0.00046, **p = 0.12** → nessun covariate shift rilevabile. Il gap CV/holdout
+è varianza degli esiti a livello campagna, non shift delle feature: il
+design dello split regge.
+
+**Gaussian Process** sul task ausiliario "predici il CR ufficiale dalle
+statistiche" (n = 797: 637 train / 160 test): kernel ARD RBF (12 length
+scale apprese, una per feature) + WhiteKernel (rumore 0.043), fit per
+marginal likelihood. MAE **0.86** contro 0.94 di XGBoost, R² 0.954, e gli
+intervalli predittivi al 95% hanno copertura empirica **0.95** — la
+calibrazione dell'incertezza che il boosting non dà. (Candidato upgrade per
+il CR predictor dell'app, con display dell'incertezza.)
+
+**CTGAN ablation — perché bilanciare fa male** (`gan_ablation.py`): CTGAN
+addestrato SOLO su sconfitte delle campagne di training (leakage-guarded),
+23.091 righe sintetiche per bilanciare l'83/17. Stesso holdout: AUC scende a
+0.638, il Brier ESPLODE a 0.186, la P(win) media predetta crolla a 0.61 in un
+mondo all'83%. Spiegazione da esame: il log-loss è una **proper scoring
+rule** — il suo minimo è la vera probabilità condizionata, quindi il modello
+impara correttamente anche da classi sbilanciate. Bilanciare insegna un base
+rate falso e distrugge la calibrazione per riparare un problema che le
+proper loss non hanno mai avuto.
+
+---
+
+## 14. Dal modello al prodotto
+
+**L'appraisal** (`lethality_appraisal`): ricerca binaria su [1, 20], 18
+iterazioni (risoluzione ~0.0001 di livello), party bilanciato di 4, target
+0.65 di default; il risultato è arrotondato al **quarto di livello** (la
+risoluzione fine sarebbe finta precisione). Prima della ricerca si valutano i
+bordi: P(lv 1) ≥ target ⇒ `trivial`; P(lv 20) < target ⇒ `beyond_deadly`.
+Insieme al livello si riporta **p_at_level** (la P(win) esatta al livello
+appraisato): due incontri possono condividere il livello e differire in
+rischio — la probabilità è il prodotto, il livello è il riassunto.
+
+**La matematica del manuale** (`official_encounter_estimate`, DMG p.82 vera):
+1. somma gli XP dei mostri (CR → XP dalla tabella ufficiale, 34 righe);
+2. moltiplicatore per numero: ×1 (1), ×1.5 (2), ×2 (3–6), ×2.5 (7–10),
+   ×3 (11–14), ×4 (15+), con lo scalino p.83 per la taglia del party (<3
+   giocatori: un gradino su; ≥6: un gradino giù);
+3. XP aggiustati → CR equivalente con `xp_to_cr` (interpolazione lineare tra
+   le righe della tabella, clampata a [0, 30]; round-trip esatto sui valori
+   di tabella, così un singolo mostro mostra sempre il suo CR stampato).
+Esempio che era un bug: 6 × CR 1 = 1.200 XP × 2 = 2.400 XP ⇒ ~CR 6, non
+"CR 1". Coperto da 9 test di regressione incluso l'esempio svolto del DMG.
+L'app mostra SEMPRE le due colonne fianco a fianco: "by the book" (con i
+passaggi) vs True Lethality Level.
+
+**L'app Streamlit** (dnd-appraising.streamlit.app, deploy automatico da
+`main`): 3 tab — 📖 bestiario ufficiale (762 mostri, badge di provenienza
+dell'offesa 🎯 parsata / 📐 tabella DMG), 🛠️ homebrew appraiser (statistiche
+raw → CR predetto "cosa stamperebbe WotC" + livello di letalità), 🧟
+encounter builder (roster misti, aggregati ESATTAMENTE come in training,
+protetti dalla dominanza). Curve di P(win) per composizione del party,
+heatmap taglia×livello, slider del target. Gemello da terminale:
+`fair_fight_finder.py`.
+
+---
+
+## 15. L'ingegneria (riproducibilità e test)
+
+- **64 test pytest** (`make test`): `test_monster_offense` (regex, spell
+  table, alternative "or", clamp), `test_feature_engineering` (formule,
+  clip, ordine colonne), `test_book_math` (9 test: round-trip xp/cr, scala
+  dei moltiplicatori, esempio del DMG, monotonia), `test_survival_guard`
+  (12 test: ancore del lattice = valori simulati esatti, costanti fittate,
+  muro da 10k HP, astensione < CR 2, monotonia in livello e count).
+- **13 assiomi comportamentali** (`make verify`, `behavior_suite.py`): scala
+  con il numero di lich monotona; dominanza; curva monotona nel livello; "no
+  staircase" (≥30 valori distinti); 11× e 19× Lich beyond_deadly; curva
+  GUARDATA ancora monotona; ordinamento dei tier (goblin > ogre > aboleth >
+  tarrasque a lv 1); goblin trivial; tarrasque beyond_deadly; mostro-dio da
+  10k HP attraverso il VERO flusso app (CR predictor → appraisal) beyond
+  deadly. Gate obbligatorio per ogni cambio di modello.
+- **Makefile**: `data`, `train`, `tune`, `test`, `verify`, `retrain` (tutta
+  la pipeline), `benchmark`, `battlecast`, `slides`, `report`,
+  `present-data`, `present`, `app`, `cli`, `clean`.
+- **Tracciabilità**: `figures/experiments.jsonl` append-only (ogni run di
+  training aggiunge una riga: parametri, metriche, timestamp); studio Optuna
+  persistito su SQLite; `figures/metrics.json` con CI; ambiente pinnato in
+  requirements.txt (pin VERI: pandas 3.0.3, numpy 2.5.1, xgboost 3.3.0,
+  sklearn 1.9.0, streamlit 1.59.1).
+- **analyze.py si difende da solo**: se le costanti della guardia in
+  produzione derivano dal suo fit, stampa un warning ("update _GUARD_*").
+
+---
+
+## 16. Limiti dichiarati + le domande difficili (con risposte)
+
+**"Perché non una rete neurale / deep learning?"**
+34.907 righe tabulari con leakage di gruppo: il regime dove gli alberi
+vincolati e i modelli lineari dominano. Una rete non offrirebbe né i vincoli
+di monotonia nativi né interpretabilità, e la CV raggruppata (varianza ±0.04)
+non avrebbe il potere di distinguerla. Il collo di bottiglia sono le
+etichette rumorose, non la capacità del modello.
+
+**"Perché non simulare TUTTO il dataset con Battlecast e mollare FIREBALL?"**
+(a) Impareremmo solo Battlecast, coi suoi bias (regole 2024, party fisso,
+gioco scriptato, niente terreno/lair) e senza segnale indipendente per capire
+DOVE sbaglia; (b) l'input space dell'app include homebrew arbitrario che il
+simulatore non rappresenta; (c) il valore statistico del progetto (leakage,
+confounding, calibrazione su base rate estremo, estimand mismatch) nasce
+proprio dai dati osservazionali; (d) se vuoi la risposta di Battlecast,
+esegui Battlecast. L'architettura finale è una **triangolazione**: dati reali
+dove i tavoli sono affidabili, simulatore dove i dati reali mentono in modo
+documentato. (Esperimento futuro citabile: modello gemello solo-sim e misura
+del sim-to-real gap su FIREBALL.)
+
+**"Il race cap da solo è ancora morbido nella zona di crossing."**
+Vero, e lo diciamo: celle con gli stessi (s, k) hanno esiti simulati opposti
+— l'errore è nelle feature (l'AoE non è prezzata), non nel fit. È esattamente
+il motivo per cui esiste il lattice: dove la verità simulata c'è, il min la
+serve tal quale.
+
+**"Ma allora il vostro modello sui boss è solo il simulatore?"**
+Sui boss della griglia, il TETTO è il simulatore; il modello resta il
+predittore ovunque il cap non morde (cioè quasi ovunque: il cap è inerte
+sugli incontri normali — goblin, sciami, boss sotto-livello). Il prodotto
+dichiara l'estimand "fino alla morte", e su quella domanda il simulatore è
+l'oracolo migliore che abbiamo.
+
+**"Perché l'accuratezza (0.825) è sotto il base rate (0.830)?"**
+Perché non ottimizziamo la 0/1 loss: soglia a 0.5 su probabilità calibrate in
+un mondo all'83% classifica quasi tutto positivo. Il prodotto non usa mai la
+soglia: usa le probabilità. Brier e log-loss sono le metriche giuste.
+
+**"Quanto è alto il numero naive (split casuale)?"**
+Non lo pubblichiamo (numero senza significato per il caso d'uso); è
+riproducibile cambiando lo splitter, e viene sensibilmente più alto. Non
+citare cifre a memoria che non sono scritte nel repo.
+
+**"Il party model (3+1.9·lvl ecc.) è rozzo."**
+Sì, deliberatamente: è un prior di scala lineare nella sola variabile
+osservata (il livello), usato in modo identico in training e serving. Ogni
+raffinamento (build, oggetti) richiederebbe dati che i log non hanno. Gli
+errori sistematici del party model vengono assorbiti dal modello a valle
+(che vede le feature, non la "verità").
+
+**"+0.28 di mercy su 3 celle è statistica?"**
+No, ed è per questo che la chiamiamo *direzionale* in ogni artefatto. Il
+gioco curato quasi non produce scontri senza speranza — è un fatto sul
+processo generativo, e la coda del report propone il fix: etichette esplicite
+di ritirata/fudge, che trasformerebbero la misericordia da contaminazione a
+variabile di censura.
+
+**"Perché il target 65% e il quarto di livello?"**
+Policy, non natura: 65% è il default "sfida equa" e c'è uno slider. Il quarto
+di livello è la risoluzione oltre la quale la precisione sarebbe finta
+(l'incertezza del modello è ben più larga di 0.25 livelli).
+
+**"Draw nel simulatore?"** Contano come non-vittorie, coerente con
+l'etichetta di training (solo "Party Win" è positivo).
+
+**"Perché il GP non è in produzione se batte XGBoost sul CR?"**
+Task ausiliario (797 mostri): il GP vince e dà intervalli con copertura
+esatta — è il candidato upgrade dichiarato per il CR predictor. Non è il
+modello principale perché n=27k con feature engineering pesante è terreno da
+boosting, e il GP esatto scala O(n³).
+
+**"2024 vs 2014?"** Il simulatore gioca statblock 2024, i log e il bestiario
+sono 2014 (Lich: 315/20 vs 135/17). La calibrazione della guardia assorbe il
+gap e lo dichiara; i tassi simulati restano upper bound (build ottimizzate).
+
+**Limiti che ammettiamo per primi** (Room 24 del deck): rumore irriducibile
+(AUC 0.657 in un mondo all'83%); estimand mismatch gestito con un cap
+esplicito e testato, non imparato in silenzio; gap di edizione del
+simulatore; mercy direzionale su poche celle; il micro-ranking OOD oltre la
+risoluzione di entrambi i sistemi.
+
+---
+
+## 17. Chi presenta cosa + comandi da sapere
+
+**I 5 atti del deck interattivo** (`presentation/slides_interactive.html`,
+`make present` → localhost:8765):
+- **Atto I — The broken rulebook** (Daniele): il gioco, il CR, la matematica
+  del DMG dal vivo (calcolatrice), perché è rotta.
+- **Atto II — The data** (Francesca): FIREBALL, l'ETL, l'Attack Potency, le
+  feature + SHAP.
+- **Atto III — Model & evaluation** (Stefano): XGBoost vincolato,
+  calibrazione, valutazione onesta, il ridge che vince e perde, il toolbox
+  del corso.
+- **Atto IV — Guards & simulation** (Antonietta): il quiz dei 19 Lich, le
+  tre guardie, il race cap (widget a due slider), il Lich Lab, la mercy.
+- **Atto V — The reckoning** (Daniele): il prodotto live, i limiti, i cinque
+  takeaway.
+
+**Comandi da sapere a memoria all'esame**:
+`make retrain` (pipeline completa) · `make verify` (13 assiomi) · `make test`
+(64 test) · `make benchmark` (toolbox) · `make battlecast` (griglie + fit
+guardia) · `make app` / app live su **dnd-appraising.streamlit.app** (HEAD di
+main) · `make report` / `make slides` (PDF).
+
+**I numeri da sapere a memoria**: 34.907 incontri / 1.462 campagne / base
+rate 83.0% / 45 feature e 45 vincoli / AUC 0.657 [0.638, 0.674] / Brier
+0.139 / CV 0.601 ± 0.040 / 84.5% mercy su 659 righe / 490.640 battaglie /
+ladder 1→11, 2→16.5, 3+→beyond deadly / ridge 0.655 ma respinta / GAN
+0.186 di Brier / 64 test + 13 assiomi.

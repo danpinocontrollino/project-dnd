@@ -213,7 +213,7 @@
       <div class="l" style="margin-top:.5em;color:#e6c35c">Daniele</div>
       <div class="l" style="margin-top:.4em;font-size:.78em;opacity:.85">⚔ boss fight: one final d20 for the questions</div>
       <div class="l" style="margin-top:.45em;font-size:.74em;line-height:1.5;border-top:1px solid rgba(201,162,39,.25);padding-top:.45em">the live appraiser &amp; demo script · four limits, four mitigations · six numbers to remember</div>
-      <div class="l" style="margin-top:auto;padding-top:.5em;font-size:.72em;font-family:var(--mono);color:#e6c35c">61 tests · 13 axioms · dnd-appraising.streamlit.app</div>
+      <div class="l" style="margin-top:auto;padding-top:.5em;font-size:.72em;font-family:var(--mono);color:#e6c35c">64 tests · 13 axioms · dnd-appraising.streamlit.app</div>
     </div>
   </div>
 </section>
@@ -480,7 +480,7 @@
     <ul>
       <li>Encounters in one campaign share party, DM, house rules ⇒ random splits leak. <strong>StratifiedGroupKFold</strong> everywhere; the split key is the campaign log, all 1,462 of them.</li>
       <li><strong>Even calibration is grouped</strong>: the Platt folds use precomputed campaign-aware splits, so the base model and its calibrator never peek at the same table.</li>
-      <li>Grouped CV says <strong>0.601 ± 0.040</strong>; the grouped holdout says 0.657. The gap between grouped and naive numbers <em>is</em> the leakage, reported instead of shipped.</li>
+      <li>Grouped CV says <strong>0.601 ± 0.040</strong>; the grouped holdout says 0.657. The gap between grouped and naive numbers, instead, <em>is</em> the leakage.</li>
       <li>CIs by <strong>percentile bootstrap</strong>: 2,000 resamples of the 7,106 held-out encounters, degenerate resamples skipped.</li>
       <li>AUC ≈ 0.66 is <strong>honest, not weak</strong>: dice, tactics and unrecorded magic items are irreducible noise, and a blind “party always wins” baseline is already right 83% of the time.</li>
     </ul>
@@ -580,7 +580,7 @@
     <span class="readout">2× → 16.5</span>
     <span class="readout">4× → 7% at lv 20</span>
     <span class="readout" style="color:#ff9b9b">3+× → ☠️ beyond deadly</span>
-    <span class="muted">(monotone, dominance-safe, pinned by 61 tests + 13 axioms)</span>
+    <span class="muted">(monotone, dominance-safe, pinned by 64 tests + 13 axioms)</span>
   </div>
   <div class="cols even" style="margin-top:1em;flex:0 0 auto">
     <div class="card"><span class="title">Why guards, not more data</span>Each guard blocks a failure that <b>no amount of the same data can fix</b>: extrapolation (no data exists out there), aggregation dilution (an artifact of our own featurization), and estimand mismatch (the logs answer a different question). Diagnosis first, then the right tool.</div>
@@ -678,7 +678,7 @@
           <span>3 · homebrew: 10,000 HP, AC 50 → graceful <b>beyond deadly</b>, no crash</span>
         </div>
       </div>
-      <div class="card"><span class="title">Engineering rigor</span>61 unit tests (parsing regexes, feature math, book math, guard anchors) + 13 behavioral axioms: count monotonicity, roster dominance, level monotonicity, boundary verdicts, OOD via the real CR-predictor flow (<code>make verify</code>) · bootstrap CIs on every metric · append-only <code>experiments.jsonl</code> + persisted Optuna study · pinned environment · one-command pipeline (<code>make retrain</code>).</div>
+      <div class="card"><span class="title">Engineering rigor</span>64 unit tests (parsing regexes, feature math, book math, guard anchors) + 13 behavioral axioms: count monotonicity, roster dominance, level monotonicity, boundary verdicts, OOD via the real CR-predictor flow (<code>make verify</code>) · bootstrap CIs on every metric · append-only <code>experiments.jsonl</code> + persisted Optuna study · pinned environment · one-command pipeline (<code>make retrain</code>).</div>
     </div>
   </div>
 </section>
@@ -722,7 +722,7 @@
           <span>Simulated deathmatches</span><b style="text-align:right">490,640</b>
           <span>Held-out ROC-AUC</span><b style="text-align:right">0.657 [0.638, 0.674]</b>
           <span>Brier score</span><b style="text-align:right">0.139 [0.134, 0.145]</b>
-          <span>Tests + behavioral axioms</span><b style="text-align:right">61 + 13</b>
+          <span>Tests + behavioral axioms</span><b style="text-align:right">64 + 13</b>
           <span>Hand-tuned constants left</span><b style="text-align:right">0</b>
         </div>
       </div>
