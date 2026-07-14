@@ -25,7 +25,6 @@
 \definecolor{sapienzaRed}{RGB}{130,36,51}
 \usepackage{titlesec}
 \titleformat{\section}{\large\bfseries\color{sapienzaRed}}{\thesection}{0.6em}{}
-\titleformat{\subsection}{\normalsize\bfseries\color{sapienzaRed}}{\thesubsection}{0.6em}{}
 \setlength{\parskip}{2pt}
 \emergencystretch=1em
 
@@ -105,7 +104,6 @@ concrete model-selection lesson. (v)~A deployed application that compares the mo
 with the DMG's own procedure, implemented honestly.
 
 \section{Data}
-\subsection{From chat logs to encounters}
 FIREBALL~\cite{fireball} collects real games played on Discord through the Avrae
 bot. The ETL script \code{parse\_fireball.py} turns 1{,}471 JSONL logs, that
 is 153{,}829 turn snapshots of which 134{,}475 are usable, into encounter rows. Outcomes are inferred from
@@ -120,7 +118,6 @@ sums for pooled HP, damage per round (DPR) and XP; ten monster trait flags; and 
 levels are clipped to $[1,20]$ because multiclass strings contain spurious digits,
 and rosters to 30 because mass-summon logs reach 241 tokens on the field.
 
-\subsection{Offensive statistics from statblock text}
 Monster manuals list HP and armor class (AC) but no machine-readable offense, which had forced an
 earlier version of the model to use CR itself as a proxy for damage. The module
 \code{monster\_offense.py} parses offense from the System Reference Document (SRD) statblock text: attack
@@ -139,7 +136,6 @@ summed to 15; 24 monsters affected) and dragon breath leaked into the multiattac
 mean (Adult Red Dragon 72.6 $\to$ 58; hand-computed truth is roughly 45 to 48).
 Spot checks: Goblin 5 (true 5), Tarrasque 150 (true $\approx$148).
 
-\subsection{Implementing the rulebook fairly}
 Since we claim to beat the DMG, we must implement it correctly.
 \code{official\_encounter\_estimate()} in \code{lethality\_engine.py} runs the full
 p.~82 procedure: total XP, the count-multiplier ladder ($\times1$, $\times1.5$,
@@ -151,7 +147,6 @@ tests cover this code, including the DMG's own worked example, so any discrepanc
 we report measures the model against the rulebook's best effort.
 
 \section{Methods}
-\subsection{Features}
 There are 45 features in five families: raw party and roster aggregates (15);
 offensive potency (5); power curves and ratios (6); trait-by-composition
 interactions such as \emph{magic resistance} $\times$ \emph{arcane party} (6); and
@@ -165,7 +160,6 @@ rounds-to-kill in both directions, their log ratio, and \code{burst\_vs\_pc\_hp}
 a single \code{sklearn} transformer (\code{DnDFeatureEngineer}) that is serialized
 inside the model pickle, so training and serving cannot compute different features.
 
-\subsection{Model and calibration}
 The production model is XGBoost~\cite{xgboost} with 300 trees of depth 4, learning
 rate 0.149, subsample 0.68, column subsample 0.85, \code{min\_child\_weight} 7 and
 regularization $(\lambda,\alpha,\gamma)=(0.105,\,0.091,\,0.009)$, chosen by
@@ -182,7 +176,6 @@ calibration and rejected it for a concrete reason: its piecewise-constant map
 collapsed the binary search onto plateau edges (one Lich and two Liches received
 the same level) while also measuring marginally worse (Brier 0.1394 vs.\ 0.1397).
 
-\subsection{Validation protocol}
 Encounters within one campaign share the party, the DM and the house rules, so the
 campaign is the unit of leakage. Every split is grouped by it: 4-fold
 \code{StratifiedGroupKFold} for model selection, a grouped 80/20 holdout
@@ -198,7 +191,6 @@ the gap between grouped CV and holdout reflects campaign-level outcome variance,
 not distribution drift.
 
 \section{Guards and simulation}
-\subsection{DM mercy}
 An early model rated \emph{nineteen} CR-21 Liches as beatable by a level-8 party
 with 66\% probability. The cause was in the data, not the code: in fights where the
 deterministic damage race says the party is deleted within one round, the logs
@@ -208,8 +200,8 @@ at real tables''; the application asks ``what happens if you fight to the death'
 This is an estimand mismatch, and no additional data collected the same way can fix
 it.
 
-\subsection{Three guards}
-First, the shape constraints and clipping described above. Second, \emph{roster
+The engine wraps the model in three guards. First, the shape constraints and
+clipping described above. Second, \emph{roster
 dominance}: count-weighted averages dilute, so a Lich with two ogres and six
 goblins has mean CR 2.94 against the Lich's own 21, and the unguarded model rated
 that larger fight \emph{easier} (level 3.25 vs.\ 5.0). The engine therefore also
@@ -228,7 +220,6 @@ losses, a failure mode our first two guards missed entirely. Sign constraints on
 $A$ and $C$ keep the cap increasing in party level and decreasing in monster
 count, so the binary search and the dominance property both survive it.
 
-\subsection{Calibrating the cap by simulation}
 Hand-tuned constants would be a weakness in an exam and in production alike, so we
 estimated them externally. We vendored the public Monte Carlo engine of Battlecast
 (a 5e combat simulator that resolves initiative, movement, spell slots and
@@ -289,7 +280,6 @@ deathmatch rates an upper bound.
 \end{figure}
 
 \section{Results}
-\subsection{Held-out performance}
 Table~\ref{tab:main} reports performance on held-out campaigns. Calibration is
 tight where the data mass lives (predicted 0.8 to 0.9) with mild overconfidence in
 the lowest bins (Fig.~\ref{fig:calib}). TreeSHAP values, computed through
@@ -324,7 +314,6 @@ Base rate $P(\text{win})$ & \multicolumn{2}{c}{0.830}\\
   \label{fig:calib}
 \end{figure}
 
-\subsection{Prediction is not decision}
 Under identical grouped CV (Table~\ref{tab:zoo}), an $\ell_2$-penalized logistic
 regression ($C{=}0.03$; the sweep over $C\in[3\cdot10^{-3},3]$ was nearly flat)
 \emph{beats} the production model on observational risk. We promoted it to
@@ -356,8 +345,8 @@ XGBoost + constraints (ours) & $0.614 \pm 0.033$ & 0.141\\
 \label{tab:zoo}
 \end{table}
 
-\subsection{Synthetic balancing ablation}
-Conditional Tabular Generative Adversarial Network (CTGAN)~\cite{ctgan} synthetic losses (23{,}091 rows,
+One more ablation: Conditional Tabular Generative Adversarial Network
+(CTGAN)~\cite{ctgan} synthetic losses (23{,}091 rows,
 fitted only on training campaigns to avoid leakage) used to balance the 83/17
 classes degrade the same holdout to AUC 0.638 and Brier 0.186, and drag the mean
 predicted probability from 0.83 down to 0.61. With a proper loss and calibration,
