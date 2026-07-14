@@ -15,6 +15,13 @@
 \usepackage{microtype}
 \graphicspath{{../figures/}}
 
+% float packing: default bottomfraction (0.3) kept bouncing the mercy
+% figure to the last page, far from its reference
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.55}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.8}
+
 \definecolor{sapienzaRed}{RGB}{130,36,51}
 \usepackage{titlesec}
 \titleformat{\section}{\large\bfseries\color{sapienzaRed}}{\thesection}{0.6em}{}
@@ -272,9 +279,9 @@ deathmatch rates an upper bound.
   \label{fig:guard}
 \end{figure*}
 
-\begin{figure}[t]
+\begin{figure}[b]
   \centering
-  \includegraphics[width=\linewidth]{battlecast_mercy_gap.png}
+  \includegraphics[width=.75\linewidth]{battlecast_mercy_gap.png}
   \caption{DM mercy quantified: model (table reality) vs.\ simulator
   (deathmatch), one point per encounter, color = CR.}
   \label{fig:mercy}
@@ -333,7 +340,7 @@ model and accept roughly 0.04 AUC as the price of sane counterfactual behavior. 
 dominance, level monotonicity, boundary verdicts, the full OOD flow through the CR
 predictor) now gates every model change, alongside 64 unit tests.
 
-\begin{table}[t]
+\begin{table}[b]
 \centering\footnotesize\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lcc}
 \toprule
