@@ -92,7 +92,7 @@ shape-constrained model, validated with campaign-grouped splits and bootstrap
 uncertainty. (iii)~A diagnosis of estimand mismatch in observational game data (DM
 mercy) and a three-guard architecture; one guard is calibrated by external
 simulation. (iv)~A benchmark of the course toolbox (penalized logistic regression,
-random Fourier features (RFF) kernel machine, maximum mean discrepancy (MMD) two-sample test, Gaussian process (GP)) that yields a
+random Fourier features (RFF) kernel machine, maximum mean discrepancy (MMD) two-sample test) that yields a
 concrete model-selection lesson. (v)~A deployed application that compares the model
 with the DMG's own procedure, implemented honestly.
 
@@ -348,13 +348,8 @@ XGBoost + constraints (ours) & $0.614 \pm 0.033$ & 0.141\\
 \label{tab:zoo}
 \end{table}
 
-\subsection{Auxiliary analyses}
-\textbf{Gaussian process.} On the separate task of predicting official CR from raw
-monster statistics ($n{=}797$), a GP regressor~\cite{gpml} with an automatic relevance determination (ARD) RBF kernel
-plus white noise, fitted by marginal likelihood, reaches a mean absolute error (MAE) of 0.86 against
-XGBoost's 0.94 ($R^2{=}0.954$), and its 95\% predictive intervals achieve
-\textbf{0.95 empirical coverage} on the test split.
-\textbf{Synthetic balancing.} Conditional Tabular Generative Adversarial Network (CTGAN)~\cite{ctgan} synthetic losses (23{,}091 rows,
+\subsection{Synthetic balancing ablation}
+Conditional Tabular Generative Adversarial Network (CTGAN)~\cite{ctgan} synthetic losses (23{,}091 rows,
 fitted only on training campaigns to avoid leakage) used to balance the 83/17
 classes degrade the same holdout to AUC 0.638 and Brier 0.186, and drag the mean
 predicted probability from 0.83 down to 0.61. With a proper loss and calibration,
@@ -410,8 +405,6 @@ Optimization Framework. \emph{KDD}, 2019.
 \bibitem{rff} A.~Rahimi and B.~Recht. Random Features for Large-Scale Kernel
 Machines. \emph{NeurIPS}, 2007.
 \bibitem{mmd} A.~Gretton et al. A Kernel Two-Sample Test. \emph{JMLR}, 13, 2012.
-\bibitem{gpml} C.~E.~Rasmussen and C.~K.~I.~Williams. \emph{Gaussian Processes for
-Machine Learning}. MIT Press, 2006.
 \bibitem{ctgan} L.~Xu et al. Modeling Tabular Data using Conditional GAN.
 \emph{NeurIPS}, 2019.
 \bibitem{shap} S.~Lundberg and S.-I.~Lee. A Unified Approach to Interpreting Model

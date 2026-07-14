@@ -951,7 +951,7 @@
       c.addEventListener('mouseenter',()=>{ tip.textContent=`CR ${cr}: deathmatch ${Math.round(ps*100)}% vs table ${Math.round(pm*100)}%`; c.setAttribute('r',7); });
       c.addEventListener('mouseleave',()=>{ tip.textContent=''; c.setAttribute('r',4.5); });
     });
-    S('text',{x:X(.28),y:Y(.62),'font-size':11,fill:'#ff9b9b'},svg).textContent='↑ mercy inflation (+0.32)';
+    S('text',{x:X(.28),y:Y(.62),'font-size':11,fill:'#ff9b9b'},svg).textContent='↑ mercy inflation (+0.28)';
     S('text',{x:X(.55),y:Y(.93),'font-size':11,fill:'#8fdb9b'},svg).textContent='↓ the 83% ceiling (−0.14)';
   } }catch(e){console.warn('mercy widget',e)}
 
