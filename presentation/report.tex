@@ -107,8 +107,8 @@ with the DMG's own procedure, implemented honestly.
 \section{Data}
 \subsection{From chat logs to encounters}
 FIREBALL~\cite{fireball} collects real games played on Discord through the Avrae
-bot. Our ETL script, \code{parse\_fireball.py}, reads 1{,}471 JSONL logs, that
-is 153{,}829 turn snapshots of which 134{,}475 are usable. Outcomes are inferred from
+bot. The ETL script \code{parse\_fireball.py} turns 1{,}471 JSONL logs, that
+is 153{,}829 turn snapshots of which 134{,}475 are usable, into encounter rows. Outcomes are inferred from
 terminal hit-point (HP) strings (``Dead'', ``0/45''); 85{,}778 unresolved fights and 9{,}215
 encounters with no bestiary match are dropped. The result is \textbf{34{,}907
 resolved encounters} from \textbf{1{,}462 campaigns}, with a party win base rate of
