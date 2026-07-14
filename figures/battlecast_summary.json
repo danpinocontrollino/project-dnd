@@ -1,17 +1,42 @@
 {
   "n_cells": 304,
-  "trials_per_cell": 2000,
+  "max_trials_per_cell": 2000,
+  "total_battles": 490640,
   "guard_fit": {
-    "slope": 1.6302078411769598,
-    "intercept": -3.9771375260011195,
-    "production_slope": 1.6302,
-    "production_intercept": -3.9771,
-    "original_hand_tuned_slope": 2.197,
-    "original_hand_tuned_intercept": -4.394
+    "A_ttk_party": 0.19243193261709257,
+    "C_log_ttk_kill": 2.085626283657279,
+    "B_intercept": 4.121743437464702,
+    "grid_brier_race_fit": 0.0542723882205451,
+    "grid_brier_v2_survival_only": 0.11564968416966354,
+    "production": [
+      0.2096,
+      1.9262,
+      3.6754
+    ],
+    "v2_survival_only": [
+      1.6302,
+      -3.9771
+    ],
+    "v1_hand_tuned": [
+      2.197,
+      -4.394
+    ],
+    "survival_only_refit": [
+      0.357627904786436,
+      -1.7778409159753223
+    ]
+  },
+  "guard_lattice": {
+    "shape": [
+      5,
+      6,
+      6
+    ],
+    "path": "battlecast_bridge/guard_lattice.json"
   },
   "mercy_gap": {
-    "mean_gap_model_minus_sim": -0.12726343172712007,
-    "corr_model_sim": 0.8454903843192183
+    "mean_gap_model_minus_sim": -0.12758997286230145,
+    "corr_model_sim": 0.8415717816163449
   },
   "ood_rank_correlation": 0.5384810394923257
 }

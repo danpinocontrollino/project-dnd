@@ -11,6 +11,8 @@ copies and the CLI silently lost the num_monsters field at some point.
 
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
@@ -244,29 +246,109 @@ def predict_win_probability(pipe, rows: List[Dict[str, float]]) -> np.ndarray:
 
 # --- survival cap ---
 # The logs lie exactly where it matters: fights that the damage math says
-# are hopeless (party wiped in <=1 round) still show up as "won" 84.5% of
-# the time, because DMs fudge, players run, reinforcements arrive. A model
-# trained on that can't answer "what if we fight 19 liches to the death",
-# so I cap P(win) with sigmoid(A * rounds_to_kill_party + B).
+# are hopeless still show up as "won" 84.5% of the time, because DMs
+# fudge, players run, reinforcements arrive. A model trained on that
+# can't answer "what if we fight 19 liches to the death", so P(win) gets
+# capped by deathmatch physics. Two caps, combined with min():
 #
-# A and B are NOT hand picked: logistic fit on the 180-cell Battlecast grid
-# (boss CR {2,5,10,15,21} x count {1..19} x level {1..20}, 2000 trials per
-# cell - see battlecast_bridge/ and figures/battlecast_guard_fit.png).
-# Caps: 1 round of survival -> 9%, 2 -> 33%, 3 -> 71%, 4 -> 93%; basically
-# inactive above ~3.7 rounds, i.e. everywhere the training data is fine.
-# My first hand-tuned guess (2.197, -4.394 = 10/50/90%) was too generous
-# in the 2-3 round zone.
-_GUARD_A = 1.6302
-_GUARD_B = -3.9771
+# 1. Race cap: sigmoid(A * rounds_party_survives - C * ln(rounds_to_kill)
+#    + B). The survival term catches fast wipes, the kill term catches
+#    slow attrition losses, which my first two guards missed completely:
+#    a level-5 party "survives" a Lich for 4+ estimated rounds, so a
+#    survival-only cap sat at 0.95 while Battlecast had the party at
+#    0.000 over 2,000 deathmatches - they can't chew through 135
+#    legendary HP behind AC 17 before the spell rotation lands. That
+#    blind spot is how one Lich got appraised "fair at level 3.25".
+#    A, C, B are a binomial-weighted logistic fit on the 180-cell
+#    Battlecast guard grid rebuilt through the same bestiary profiles the
+#    app serves (battlecast_bridge/analyze.py). History: v1 hand-tuned
+#    (2.197, -4.394), v2 survival-only fit (1.6302, -3.9771), v3 this.
+#
+# 2. Lattice cap: the TTK features can't tell a Lich from a bag of hit
+#    points (AoE rotations aren't priced by the damage math), so where we
+#    HAVE simulated truth we serve it directly - trilinear interpolation
+#    over the guard grid (CR {2,5,10,15,21} x count {1,2,4,8,12,19} x
+#    level {1,5,9,13,17,20}), made monotone at build time. Below CR 2 it
+#    abstains (weak monsters were never the bug); beyond the grid it
+#    clamps to the nearest edge, and the race cap covers what the lattice
+#    can't see (a 10,000-HP homebrew wall stays beyond deadly).
+#
+# Coefficient signs and the lattice massage are both constrained, so the
+# combined cap stays monotone up in party level and monotone down in
+# monster count - the axioms the behavior suite pins.
+_GUARD_A = 0.1924
+_GUARD_C = 2.0856
+_GUARD_B = 4.1217
+
+_LATTICE_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "battlecast_bridge", "guard_lattice.json"
+)
+_LATTICE: dict | None = None
+
+
+def _load_lattice() -> dict | None:
+    global _LATTICE
+    if _LATTICE is None and os.path.exists(_LATTICE_PATH):
+        with open(_LATTICE_PATH, encoding="utf-8") as fh:
+            raw = json.load(fh)
+        _LATTICE = {
+            "crs": np.array(raw["crs"], dtype=float),
+            "counts": np.array(raw["counts"], dtype=float),
+            "levels": np.array(raw["levels"], dtype=float),
+            "p": np.array(raw["p_win"], dtype=float),
+        }
+    return _LATTICE
+
+
+def _interp_1d(grid: np.ndarray, x: float) -> Tuple[int, int, float]:
+    """Clamped linear-interpolation stencil: (lo, hi, weight of hi)."""
+    x = float(np.clip(x, grid[0], grid[-1]))
+    hi = int(np.searchsorted(grid, x))
+    if hi == 0:
+        return 0, 0, 0.0
+    lo = hi - 1
+    if hi == len(grid):
+        return lo, lo, 0.0
+    w = (x - grid[lo]) / (grid[hi] - grid[lo])
+    return lo, hi, w
+
+
+def _lattice_cap(rows: List[Dict[str, float]]) -> np.ndarray:
+    lat = _load_lattice()
+    out = np.ones(len(rows))
+    if lat is None:
+        return out
+    for i, r in enumerate(rows):
+        cr = float(r["avg_monster_cr"])
+        if cr < lat["crs"][0]:
+            continue  # below the grid the lattice has nothing to say
+        c0, c1, wc = _interp_1d(lat["crs"], cr)
+        n0, n1, wn = _interp_1d(lat["counts"], float(r["num_monsters_total"]))
+        l0, l1, wl = _interp_1d(lat["levels"], float(r["avg_party_level"]))
+        p = lat["p"]
+        out[i] = (
+            (1 - wc) * ((1 - wn) * ((1 - wl) * p[c0, n0, l0] + wl * p[c0, n0, l1])
+                        + wn * ((1 - wl) * p[c0, n1, l0] + wl * p[c0, n1, l1]))
+            + wc * ((1 - wn) * ((1 - wl) * p[c1, n0, l0] + wl * p[c1, n0, l1])
+                    + wn * ((1 - wl) * p[c1, n1, l0] + wl * p[c1, n1, l1]))
+        )
+    return out
 
 
 def _survival_cap(rows: List[Dict[str, float]]) -> np.ndarray:
-    """Cap on P(win) from the deterministic damage race (see above)."""
+    """Cap on P(win) from deathmatch physics (see the block comment above)."""
     from initial_learn import DnDFeatureEngineer, FEATURE_COLUMNS
 
-    feats = DnDFeatureEngineer(1.5, FEATURE_COLUMNS).transform(pd.DataFrame(rows))
-    rtk = feats["rounds_to_kill_party"].to_numpy(dtype=float)
-    return 1.0 / (1.0 + np.exp(-(_GUARD_A * rtk + _GUARD_B)))
+    cols = list(FEATURE_COLUMNS) + ["rounds_to_kill_monster_raw"]
+    feats = DnDFeatureEngineer(1.5, cols).transform(pd.DataFrame(rows))
+    survive = feats["rounds_to_kill_party"].to_numpy(dtype=float)
+    # Unclipped on purpose: at the model feature's clip (50 rounds) a
+    # 10,000-HP wall and a merely tough boss look identical, and the wall
+    # must stay hopeless.
+    kill = feats["rounds_to_kill_monster_raw"].to_numpy(dtype=float)
+    z = _GUARD_A * survive - _GUARD_C * np.log(np.maximum(kill, 1e-6)) + _GUARD_B
+    race = 1.0 / (1.0 + np.exp(-z))
+    return np.minimum(race, _lattice_cap(rows))
 
 
 def predict_win_for_parties(

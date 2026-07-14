@@ -285,7 +285,7 @@
   \begin{enumerate}
     \item \textbf{Shape priors + clipping} — monotone constraints and legal-range clipping: absurd homebrew degrades gracefully.
     \item \textbf{Roster dominance} — count-weighted averages dilute (Lich + 6 goblins ``looks easier'' than the Lich alone); we score every homogeneous sub-roster and take the \textbf{minimum} win probability: adding monsters can never help the party.
-    \item \textbf{Survival physics cap} — $P(\text{win}) \leq \sigma(a \cdot \text{TTK} + b)$ where TTK = deterministic rounds-to-kill-the-party. Originally hand-tuned\ldots
+    \item \textbf{Deathmatch physics cap} — $P(\text{win}) \leq \min(\sigma(A\,s - C\ln k + B),\ \Lambda)$: $s$ = rounds the party survives, $k$ = rounds to kill the roster, $\Lambda$ = interpolated simulator lattice. Originally hand-tuned\ldots
   \end{enumerate}
   \begin{exampleblock}{}
     \centering \ldots and hand-tuned constants are a weakness — so we calibrated them externally.
@@ -313,11 +313,11 @@
 \begin{frame}{Result 1: the guard, calibrated}
   \begin{columns}[T]
     \column{0.47\textwidth}
+      \small
       \begin{itemize}
-        \item Binomial-weighted logistic fit on the 180 guard cells:
-              $\sigma(\textbf{1.63}\,\text{TTK} - \textbf{3.98})$ replaces $\sigma(2.197\,\text{TTK} - 4.394)$.
-        \item Survive 1 round $\to$ cap 9\%; 2 rounds $\to$ \textbf{33\%} (was 50\%); 3 $\to$ 71\% (was 90\%); inert above $\approx$3.7 — the hand guess was too generous exactly in the 2–3 round zone.
-        \item Lich ladder now: 1$\to$3.25, 2$\to$6.75, 4$\to$12.75, \textbf{8+ $\to$ beyond deadly}.
+        \item Race fit on guard+OOD cells: $\sigma(\textbf{0.19}\,s - \textbf{2.09}\ln k + \textbf{4.12})$. Survival-only guards were blind to \textbf{attrition}: 1 Lich vs level 5 survives 4+ rounds $\to$ old cap 0.95, simulator \textbf{0.000}.
+        \item TTK features can't price spell rotations $\to$ $\Lambda$ = monotone lattice over the boss grid: on grid cells served $=$ simulated.
+        \item Lich ladder now: 1$\to$\textbf{11}, 2$\to$\textbf{16.5}, \textbf{3+ $\to$ beyond deadly} — the simulator's own 65\% crossings.
       \end{itemize}
     \column{0.5\textwidth}
       \includegraphics[width=\textwidth]{battlecast_guard_fit.png}
@@ -329,11 +329,11 @@
     \column{0.47\textwidth}
       \small
       \begin{itemize}
-        \item Same encounters through both lenses: our model (table reality) vs Battlecast (deathmatch). Correlation \textbf{0.845}.
-        \item The gap \textbf{crosses over}: $\approx$ \textbf{+0.32 above} sim on hard fights (mercy inflation), $\approx$ \textbf{$-$0.14 below} on easy ones (the 83\% ceiling).
+        \item Same encounters through both lenses: our model (table reality) vs Battlecast (deathmatch). Correlation \textbf{0.842}.
+        \item The gap \textbf{crosses over}: $\approx$ \textbf{+0.28 above} sim on hard fights (mercy inflation), $\approx$ \textbf{$-$0.14 below} on easy ones (the 83\% ceiling).
         \item Real curated encounters are overwhelmingly deathmatch-easy — table danger is attrition, not hopeless matchups.
       \end{itemize}
-      \srcnote{Few hard-fight cells: +0.32 is directional. OOD: extremes agree (HP$\times$20 $\to$ $P\approx0$), mid ranking moderate (Spearman 0.54).}
+      \srcnote{Few hard-fight cells: +0.28 is directional. OOD: extremes agree (HP$\times$20 $\to$ $P\approx0$), mid ranking moderate (Spearman 0.54).}
     \column{0.5\textwidth}
       \includegraphics[width=\textwidth]{battlecast_mercy_gap.png}
   \end{columns}

@@ -488,10 +488,15 @@ class DnDFeatureEngineer(BaseEstimator, TransformerMixin):
             * (1.0 + 0.4 * out["monster_has_pack_tactics"])
         )
 
-        out["rounds_to_kill_monster"] = (
-            effective_monster_hp
-            / (party_dpr * out["party_hit_chance"]).replace(0, np.nan)
-        ).clip(upper=50)
+        # The unclipped version is NOT a model feature (it's not in
+        # FEATURE_COLUMNS) but the survival guard needs it: at the clip a
+        # 10,000-HP wall (350+ rounds) and a tough boss (50) look the same.
+        out["rounds_to_kill_monster_raw"] = effective_monster_hp / (
+            party_dpr * out["party_hit_chance"]
+        ).replace(0, np.nan)
+        out["rounds_to_kill_monster"] = out["rounds_to_kill_monster_raw"].clip(
+            upper=50
+        )
         out["rounds_to_kill_party"] = (
             party_hp / monster_effective_dpr.replace(0, np.nan)
         ).clip(upper=50)

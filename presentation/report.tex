@@ -207,14 +207,18 @@ goblins has mean CR 2.94 against the Lich's own 21, and the unguarded model rate
 that larger fight \emph{easier} (level 3.25 vs.\ 5.0). The engine therefore also
 scores every homogeneous sub-roster and returns the elementwise minimum of the win
 probabilities, enforcing the axiom that adding monsters can never help the party
-(\code{predict\_win\_for\_parties}). Third, a \emph{survival cap},
+(\code{predict\_win\_for\_parties}). Third, a \emph{deathmatch cap},
 \[
-P(\text{win}) \;\le\; \sigma\!\big(a\cdot\mathrm{TTK} + b\big),
+P(\text{win}) \;\le\; \min\!\big(\sigma(A\, s - C \ln k + B),\; \Lambda\big),
 \]
-where TTK is the deterministic rounds-to-kill-the-party computed from the same
-feature mathematics the model trains on. The cap is smooth, increasing in party
-level and decreasing in roster damage, so the binary search and the dominance
-property both survive it.
+where $s$ is the deterministic number of rounds the party survives and $k$ the
+number of rounds it needs to kill the roster, both computed from the same feature
+mathematics the model trains on ($k$ deliberately unclipped, so a 10{,}000-HP
+homebrew wall stays hopeless), and $\Lambda$ is a lattice term described below.
+The survive term catches fast wipes; the $\ln k$ term catches slow attrition
+losses, a failure mode our first two guards missed entirely. Sign constraints on
+$A$ and $C$ keep the cap increasing in party level and decreasing in monster
+count, so the binary search and the dominance property both survive it.
 
 \subsection{Calibrating the cap by simulation}
 Hand-tuned constants would be a weakness in an exam and in production alike, so we
@@ -228,22 +232,28 @@ fixed to Fighter/Cleric/Wizard/Rogue. The grids: a 180-cell \emph{guard} grid (b
 CR $\{2,5,10,15,21\}\times$ count $\{1,2,4,8,12,19\}\times$ level
 $\{1,5,9,13,17,20\}$); a 100-cell \emph{mercy} grid (25 SRD monsters spanning CR 0
 to 10, four levels each); and a 24-cell \emph{OOD} grid of HP- and AC-scaled
-clones. A binomially weighted logistic fit of simulated $P(\text{win})$ on TTK over
-the guard grid gives
+clones. A binomially weighted logistic fit of simulated $P(\text{win})$ on both race
+features, over the guard and OOD grids together, gives
 \[
-\sigma(1.63\,\mathrm{TTK} - 3.98)
-\quad\text{replacing}\quad
-\sigma(2.197\,\mathrm{TTK} - 4.394),
+\sigma(0.19\, s - 2.09 \ln k + 4.12).
 \]
-that is, caps of 9\%, 33\% and 71\% at 1, 2 and 3 rounds of survival; our original
-hand guess (10/50/90\%) was too generous in the 2-to-3-round zone. The cap is
-essentially inactive above ${\approx}3.7$ rounds, exactly where the training data
-is trustworthy (Fig.~\ref{fig:guard}). With all guards in place the Lich ladder
-reads $1\to3.25$, $2\to6.75$, $4\to12.75$, and $8{+}\to$ \emph{beyond deadly}
-(nineteen Liches: 9.1\% at level 20).
+Our first fit used the survive term alone, $\sigma(1.63\, s - 3.98)$, and it
+carried a blind spot the simulator exposed: one Lich against a level-5 party
+survives $4{+}$ estimated rounds, so the survival-only cap sat at $0.95$ while
+Battlecast had the party at \textbf{0.000} over 2{,}000 deathmatches. Surviving is
+not winning when 135 legendary hit points sit behind AC 17. Two TTK features
+cannot fully separate such cells (spell rotations and AoE are not priced by the
+damage math), so wherever simulated truth exists we serve it directly: $\Lambda$
+trilinearly interpolates the guard grid itself over (CR, count, level), made
+monotone at build time and abstaining below CR 2
+(\code{battlecast\_bridge/guard\_lattice.json}). On grid cells the served
+probability \emph{is} the simulated one. With all guards in place the Lich ladder
+reads $1\to11$, $2\to16.5$, and $3{+}\to$ \emph{beyond deadly} (four Liches: 7\%
+at level 20; eight or more: 0.0\%), against simulated 65\%-crossings of
+${\approx}11$ and ${\approx}16.5$ (Fig.~\ref{fig:guard}).
 
 Pairing both lenses on the mercy grid quantifies the bias (Fig.~\ref{fig:mercy}):
-correlation 0.845, with a crossover. The model sits about ${+}0.32$ above the
+correlation 0.842, with a crossover. The model sits about ${+}0.28$ above the
 simulator on hard fights (mercy inflation; only a handful of cells fall in this
 region, so the number is directional) and about ${-}0.14$ below on easy ones,
 which is the 83\% ceiling produced by retreats and noisy labels. On the OOD grid
@@ -256,8 +266,9 @@ deathmatch rates an upper bound.
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{battlecast_guard_fit.png}
-  \caption{Survival cap vs.\ deathmatch outcomes: 180 simulated cells, the
-  calibrated fit (production) and the previous hand-tuned curve.}
+  \caption{Deathmatch cells vs.\ the damage race (left) and cap values against
+  simulated outcomes (right): the race fit against the survival-only guard it
+  replaced.}
   \label{fig:guard}
 \end{figure}
 

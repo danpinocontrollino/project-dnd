@@ -205,7 +205,7 @@
       <div class="l" style="margin-top:.5em;color:#e6c35c">Antonietta</div>
       <div class="l" style="margin-top:.4em;font-size:.78em;opacity:.85">⚔ boss fight: the Lich Lab: the real model, live</div>
       <div class="l" style="margin-top:.45em;font-size:.74em;line-height:1.5;border-top:1px solid rgba(201,162,39,.25);padding-top:.45em">the 19-Lich quiz · DM mercy = 84.5% · three guards · 490k deathmatches, guard calibrated</div>
-      <div class="l" style="margin-top:auto;padding-top:.5em;font-size:.72em;font-family:var(--mono);color:#e6c35c">σ(1.63·TTK − 3.98), zero hand-tuned constants left</div>
+      <div class="l" style="margin-top:auto;padding-top:.5em;font-size:.72em;font-family:var(--mono);color:#e6c35c">min(race cap, simulator lattice), zero hand-tuned constants left</div>
     </div>
     <div class="stat" style="text-align:left;padding:1em;border-color:rgba(163,39,58,.6);display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">V · The Reckoning</div>
@@ -278,13 +278,13 @@
     <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.1em">⚔️ level L</div>
       <div class="l" style="font-size:.88em;margin-top:.5em">The target is crossed inside [1, 20]: <b>L is the True Lethality Level</b>, reported with the exact win probability at that level.<br><br>
-      <b>Seen in the wild:</b> 1 Lich → 3.25 · 2 Liches → 6.75 · 4 Liches → 12.75. Official CR for the Lich says 21: the single biggest book-vs-data discrepancy we measured.<br><br>
-      We report “level 12.75 <i>(64.6% win at this level)</i>” because two encounters can share a level and still differ in risk, so the probability is the product and the level is the summary.</div>
+      <b>Seen in the wild:</b> 1 Lich → 11 · 2 Liches → 16.5, pinned to 490,640 simulated deathmatches. Official CR for the Lich says 21, "deadly" tier for a level-17 party of 4: the book and the simulator disagree about solo bosses, because 4 actions per round beat 1.<br><br>
+      We report “level 16.5 <i>(65% win at this level)</i>” because two encounters can share a level and still differ in risk, so the probability is the product and the level is the summary.</div>
     </div>
     <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.1em;color:#ff9b9b">☠️ beyond deadly</div>
       <div class="l" style="font-size:.88em;margin-top:.5em">P(win) &lt; target even at <b>level 20</b>. A TPK machine and the app says so instead of extrapolating.<br><br>
-      <b>Seen in the wild:</b> the Tarrasque; 8+ Liches; any homebrew past the physics guard (19 Liches: P(win) at level 20 = <b>9.1%</b>).<br><br>
+      <b>Seen in the wild:</b> the Tarrasque; 3+ Liches (4 Liches: 7% at level 20; 8+: <b>0.0%</b>); any homebrew past the physics guards.<br><br>
       The verdict ships with its ceiling (“even a level-20 party only wins X%”) so the DM knows <i>how far</i> beyond deadly, without us inventing a fantasy “level 27” the model has no support for.</div>
     </div>
   </div>
@@ -569,17 +569,17 @@
   <ol style="font-size:1.06em;gap:1em">
     <li><strong>Shape priors + clipping</strong>: 45 monotone constraints and legal-range clipping: absurd homebrew degrades gracefully. Caught in testing: a 10,000-HP, AC-50, DPR-999 monster → clean <em>beyond deadly</em> through the real app flow, no crash, no nonsense.</li>
     <li><strong>Roster dominance</strong>: count-weighted averages dilute: Lich + 2 Ogres + 6 Goblins has <b>avg CR 2.94</b> while the Lich alone is CR 21, so the raw model rated the <em>bigger</em> fight easier (level 3.25 vs 5.0). Fix: score every homogeneous sub-roster and keep the <strong>minimum</strong> P(win); adding monsters can never help the party. Axiom, not heuristic.</li>
-    <li><strong>Survival physics cap</strong>: P(win) ≤ σ(a·TTK + b), TTK = deterministic rounds-to-kill-the-party from the same feature math the model trains on: smooth, monotone in level, decreasing in roster damage, so binary search and dominance both survive. Anchored by judgment on day one to 10% / 50% / 90% at 1 / 2 / 3 rounds…</li>
+    <li><strong>Deathmatch physics cap</strong>: P(win) ≤ min(<b>race cap</b>, <b>simulator lattice</b>). The race cap σ(A·survive − C·ln kill + B) reads both sides of the damage race from the same feature math the model trains on; the lattice interpolates Battlecast's own win rates over the boss grid (CR × count × level), so where we HAVE simulated truth we serve it exactly. Smooth, monotone in level, decreasing in count: binary search and dominance both survive. Anchored by judgment on day one…</li>
   </ol>
   <div class="card" style="margin-top:1em;text-align:center;font-size:1.05em">
     …and a hand-tuned constant is a confession. So we bought <b>490,640 simulated battles</b> and made the simulator set it.
   </div>
   <div class="wrow" style="margin-top:.9em;gap:.5em;justify-content:center">
     <span class="muted">With all three guards, the Lich ladder:</span>
-    <span class="readout">1× → level 3.25</span>
-    <span class="readout">2× → 6.75</span>
-    <span class="readout">4× → 12.75</span>
-    <span class="readout" style="color:#ff9b9b">8+× → ☠️ beyond deadly</span>
+    <span class="readout">1× → level 11</span>
+    <span class="readout">2× → 16.5</span>
+    <span class="readout">4× → 7% at lv 20</span>
+    <span class="readout" style="color:#ff9b9b">3+× → ☠️ beyond deadly</span>
     <span class="muted">(monotone, dominance-safe, pinned by 61 tests + 13 axioms)</span>
   </div>
   <div class="cols even" style="margin-top:1em;flex:0 0 auto">
@@ -589,17 +589,20 @@
 </section>
 
 <section class="slide" data-part="Act IV · Guards & simulation">
-  <h2>The guard, calibrated on deathmatch truth <small>180 Battlecast cells · up to 2,000 Monte Carlo trials each · drag the slider</small></h2>
+  <h2>The race cap, calibrated on deathmatch truth <small>204 Battlecast cells (guard + OOD) · up to 2,000 trials each · drag both sliders</small></h2>
   <div class="widget">
     <svg id="guardChart" viewBox="0 0 760 300" style="width:100%;flex:1"></svg>
     <div class="wrow">
-      <label>Rounds the party survives (TTK)</label>
-      <input type="range" id="gTTK" min="0.5" max="6" step="0.1" value="2">
-      <span class="readout" id="gTTKv">2.0</span>
-      <span class="muted">cap now:</span><span class="readout" id="gNew" style="color:var(--gold2)">33%</span>
-      <span class="muted">hand-tuned said:</span><span class="readout" id="gOld" style="color:#ff9b9b">50%</span>
+      <label>Rounds the party survives</label>
+      <input type="range" id="gTTK" min="0.5" max="6" step="0.1" value="4">
+      <span class="readout" id="gTTKv">4.0</span>
+      <label>Rounds to kill the roster</label>
+      <input type="range" id="gKill" min="1" max="40" step="0.5" value="9">
+      <span class="readout" id="gKillv">9.0</span>
+      <span class="muted">race cap:</span><span class="readout" id="gNew" style="color:var(--gold2)">61%</span>
+      <span class="muted">survival-only said:</span><span class="readout" id="gOld" style="color:#ff9b9b">95%</span>
     </div>
-    <p class="muted">Binomial-weighted logistic fit: σ(<b>1.63</b>·TTK − <b>3.98</b>) replaces σ(2.197·TTK − 4.394). The hand guess was too generous exactly in the 2–3-round zone; inert above ≈ 3.7 rounds, where training data is trustworthy.</p>
+    <p class="muted">σ(<b>0.19</b>·survive − <b>2.09</b>·ln kill + <b>4.12</b>), binomial-weighted fit. Our first Battlecast fit used the survive term alone and stayed at 0.95 for one Lich vs a level-5 party (they last 4+ rounds) while the simulator had them at <b>0.000</b>: surviving is not winning when you can't chew through 135 legendary HP. The gold curve moves with the kill slider; on the boss grid itself the served cap is even sharper, because the lattice takes the simulator's exact number (that's the min).</p>
   </div>
 </section>
 
@@ -612,7 +615,7 @@
       <span class="readout" id="lichNv">1</span>
       <span style="flex:1"></span>
       <span class="muted">True Lethality Level:</span>
-      <span class="verdict ok" id="lichVerdict">3.25</span>
+      <span class="verdict ok" id="lichVerdict">11</span>
     </div>
     <svg id="lichChart" viewBox="0 0 760 300" style="width:100%;flex:1"></svg>
     <p class="muted">Curve = P(win) for a balanced party of 4, levels 1–20, from <code>true_lethality_model.pkl</code> with dominance + survival guard. Dashed line = 65% target. Watch the crossing point walk right, then vanish at 8+.</p>
@@ -624,8 +627,8 @@
   <div class="cols even">
     <div>
       <ul style="font-size:.98em">
-        <li>x = Battlecast deathmatch truth, y = our model (table reality). Correlation <strong>0.845</strong>.</li>
-        <li>The gap <strong>crosses over</strong>: ≈ <b>+0.32</b> above the diagonal on hard fights (mercy inflation), ≈ <b>−0.14</b> below on easy ones (the 83% ceiling).</li>
+        <li>x = Battlecast deathmatch truth, y = our model (table reality). Correlation <strong>0.842</strong>.</li>
+        <li>The gap <strong>crosses over</strong>: ≈ <b>+0.28</b> above the diagonal on hard fights (mercy inflation), ≈ <b>−0.14</b> below on easy ones (the 83% ceiling).</li>
         <li>Bonus: real curated encounters are overwhelmingly deathmatch-easy: table danger is attrition, not hopeless matchups.</li>
       </ul>
       <div class="card" style="margin-top:.8em"><span class="title">How to read the plot</span>
@@ -636,7 +639,7 @@
           <span>· below = the 83% ceiling drags easy fights down (retreats, noisy labels)</span>
         </div>
       </div>
-      <p class="muted" style="margin-top:.6em">Few hard cells → +0.32 is directional, stated as such. Companion OOD grid (24 cells): extremes agree perfectly (HP×20 clones win ≈ 0.000–0.003 of deathmatches, matching our <em>beyond deadly</em>), while fine mid-range ordering is only moderate (Spearman ρ = 0.54): verdicts validated, micro-ranking beyond either system's resolution.</p>
+      <p class="muted" style="margin-top:.6em">Few hard cells → +0.28 is directional, stated as such. Companion OOD grid (24 cells): extremes agree perfectly (HP×20 clones win ≈ 0.000–0.003 of deathmatches, matching our <em>beyond deadly</em>), while fine mid-range ordering is only moderate (Spearman ρ = 0.54): verdicts validated, micro-ranking beyond either system's resolution.</p>
     </div>
     <div class="widget" style="padding:.6em"><svg id="mercyChart" viewBox="0 0 460 320" style="width:100%;height:100%"></svg></div>
   </div>
@@ -689,7 +692,7 @@
     </div>
     <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">Estimand mismatch</div>
-      <div class="l" style="font-size:.9em;margin-top:.5em">“Fight to the death” is not in observational data: in the logs, fights the damage math calls hopeless were still “won” <b>84.5%</b> of the time (659 rows of DM mercy).<br><br>Handled by an explicit cap, σ(1.63·TTK − 3.98), fitted on the Battlecast guard grid, anchors 9% / 33% / 71% at 1 / 2 / 3 rounds of survival, inert above ≈ 3.7 where training data is trustworthy. A documented modeling <b>choice</b> with its own regression tests, not something silently learned.</div>
+      <div class="l" style="font-size:.9em;margin-top:.5em">“Fight to the death” is not in observational data: in the logs, fights the damage math calls hopeless were still “won” <b>84.5%</b> of the time (659 rows of DM mercy).<br><br>Handled by an explicit cap: min of a fitted damage-race sigmoid, σ(0.19·survive − 2.09·ln kill + 4.12), and a lattice that interpolates the simulator's own win rates over the boss grid. On grid cells the served number IS the simulated one (one Lich, level 9: 0.282 both). A documented modeling <b>choice</b> with its own regression tests, not something silently learned.</div>
     </div>
     <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">Simulator caveats</div>
@@ -697,7 +700,7 @@
     </div>
     <div class="stat" style="text-align:left;padding:1em;display:flex;flex-direction:column">
       <div class="n" style="font-size:1.05em">Thin support on hard fights</div>
-      <div class="l" style="font-size:.9em;margin-top:.5em">Curated play rarely produces hopeless battles: 96 of 100 mercy-grid cells are deathmatch-easy, so the +0.32 mercy estimate rests on a handful of hard cells: directional, not precise.<br><br>Next steps, in order of value: a Foundry VTT module (~200 lines) exporting clean combat events; a 30-second post-encounter form adding explicit <b>retreat/fudge labels</b>, turning mercy from contamination into a censoring variable; an all-SRD replay grid re-fighting real logged encounters in the simulator.</div>
+      <div class="l" style="font-size:.9em;margin-top:.5em">Curated play rarely produces hopeless battles: 96 of 100 mercy-grid cells are deathmatch-easy, so the +0.28 mercy estimate rests on a handful of hard cells: directional, not precise.<br><br>Next steps, in order of value: a Foundry VTT module (~200 lines) exporting clean combat events; a 30-second post-encounter form adding explicit <b>retreat/fudge labels</b>, turning mercy from contamination into a censoring variable; an all-SRD replay grid re-fighting real logged encounters in the simulator.</div>
     </div>
   </div>
 </section>
@@ -757,7 +760,7 @@
 </div>
 
 <script type="application/json" id="interactiveData">
-{"lich":{"1":[0.1261,0.3168,0.5369,0.6991,0.7607,0.7921,0.8232,0.8295,0.8446,0.8458,0.8481,0.8485,0.8539,0.8545,0.8547,0.8558,0.8564,0.858,0.8598,0.8599],"2":[0.0494,0.0853,0.1453,0.2398,0.3736,0.5348,0.6934,0.8068,0.8299,0.8326,0.8334,0.8338,0.8408,0.8426,0.8428,0.845,0.8467,0.8499,0.8524,0.8525],"3":[0.0357,0.0518,0.0754,0.1096,0.1584,0.2257,0.3139,0.4215,0.5407,0.6589,0.7631,0.8298,0.8369,0.8381,0.8383,0.8413,0.8425,0.8454,0.8487,0.8488],"4":[0.0303,0.0401,0.0534,0.0714,0.0956,0.128,0.1707,0.2259,0.2948,0.3774,0.4708,0.5694,0.6658,0.7528,0.8252,0.8387,0.84,0.8429,0.8467,0.8468],"5":[0.0274,0.0344,0.0433,0.0548,0.0696,0.0886,0.1131,0.1442,0.1835,0.2322,0.2913,0.3608,0.4393,0.5238,0.6098,0.6921,0.7662,0.8289,0.8462,0.8464],"6":[0.0257,0.031,0.0376,0.0458,0.0561,0.0688,0.0848,0.1046,0.1293,0.1598,0.1972,0.2424,0.2961,0.3581,0.4278,0.503,0.5808,0.6574,0.7291,0.7926],"7":[0.0245,0.0288,0.034,0.0403,0.048,0.0573,0.0686,0.0825,0.0995,0.1202,0.1454,0.1758,0.2124,0.2557,0.3063,0.3641,0.4284,0.4976,0.5696,0.6413],"8":[0.0236,0.0272,0.0315,0.0366,0.0426,0.0498,0.0585,0.0689,0.0813,0.0963,0.1144,0.136,0.1619,0.1928,0.2293,0.2719,0.3209,0.3763,0.4374,0.5028],"9":[0.023,0.0261,0.0297,0.0339,0.0389,0.0447,0.0516,0.0597,0.0693,0.0808,0.0944,0.1105,0.1298,0.1526,0.1795,0.2112,0.2482,0.2909,0.3394,0.3937],"10":[0.0225,0.0252,0.0283,0.0319,0.0361,0.0409,0.0466,0.0532,0.0609,0.07,0.0807,0.0933,0.1081,0.1255,0.1461,0.1703,0.1986,0.2315,0.2695,0.3129],"11":[0.0221,0.0245,0.0272,0.0304,0.034,0.0381,0.0429,0.0484,0.0548,0.0622,0.0709,0.081,0.0928,0.1066,0.1228,0.1417,0.1639,0.1897,0.2196,0.2542],"12":[0.0217,0.0239,0.0264,0.0291,0.0323,0.0359,0.04,0.0447,0.0501,0.0563,0.0635,0.0719,0.0815,0.0928,0.1058,0.1211,0.1388,0.1594,0.1834,0.2111],"13":[0.0215,0.0234,0.0256,0.0281,0.0309,0.0341,0.0377,0.0418,0.0465,0.0518,0.0579,0.0649,0.073,0.0824,0.0931,0.1057,0.1202,0.137,0.1565,0.1791],"14":[0.0212,0.023,0.025,0.0273,0.0298,0.0326,0.0358,0.0394,0.0435,0.0482,0.0534,0.0595,0.0664,0.0743,0.0834,0.0939,0.1059,0.1199,0.1361,0.1547],"15":[0.021,0.0227,0.0245,0.0266,0.0289,0.0314,0.0343,0.0375,0.0411,0.0452,0.0498,0.0551,0.0611,0.0679,0.0757,0.0846,0.0949,0.1066,0.1202,0.1359],"16":[0.0208,0.0224,0.0241,0.026,0.0281,0.0304,0.033,0.0359,0.0391,0.0428,0.0469,0.0515,0.0568,0.0627,0.0695,0.0772,0.086,0.0961,0.1077,0.121],"17":[0.0207,0.0221,0.0237,0.0255,0.0274,0.0295,0.0319,0.0345,0.0375,0.0407,0.0444,0.0485,0.0532,0.0585,0.0644,0.0712,0.0788,0.0876,0.0976,0.1091],"18":[0.0206,0.0219,0.0234,0.025,0.0268,0.0288,0.0309,0.0333,0.036,0.039,0.0423,0.046,0.0502,0.0549,0.0602,0.0662,0.0729,0.0806,0.0894,0.0993],"19":[0.0204,0.0217,0.0231,0.0246,0.0263,0.0281,0.0301,0.0323,0.0348,0.0375,0.0405,0.0439,0.0477,0.0519,0.0566,0.062,0.068,0.0748,0.0825,0.0913]},"guard":[[6.53,0.999],[23.59,1.0],[45.71,1.0],[50.0,1.0],[50.0,1.0],[50.0,1.0],[3.27,0.844],[11.8,1.0],[22.86,1.0],[37.76,1.0],[50.0,1.0],[50.0,1.0],[1.63,0.018],[5.9,1.0],[11.43,1.0],[18.88,1.0],[29.47,1.0],[40.89,1.0],[0.82,0.0],[2.95,0.901],[5.71,0.998],[9.44,1.0],[14.74,1.0],[20.45,1.0],[0.54,0.0],[1.97,0.403],[3.81,0.939],[6.29,1.0],[9.82,1.0],[13.63,1.0],[0.34,0.0],[1.24,0.007],[2.41,0.563],[3.98,0.979],[6.2,1.0],[8.61,1.0],[2.4,0.368],[8.39,1.0],[15.6,1.0],[24.47,1.0],[35.62,1.0],[46.08,1.0],[1.2,0.001],[4.19,0.881],[7.8,1.0],[12.23,1.0],[17.81,1.0],[23.04,1.0],[0.6,0.0],[2.1,0.029],[3.9,0.545],[6.12,0.999],[8.91,1.0],[11.52,1.0],[0.3,0.0],[1.05,0.0],[1.95,0.003],[3.06,0.148],[4.45,0.85],[5.76,0.98],[0.2,0.0],[0.7,0.0],[1.3,0.0],[2.04,0.007],[2.97,0.343],[3.84,0.672],[0.13,0.0],[0.44,0.0],[0.82,0.0],[1.29,0.0],[1.87,0.109],[2.43,0.247],[1.2,0.913],[4.16,1.0],[7.67,1.0],[11.9,1.0],[17.1,1.0],[21.85,1.0],[0.6,0.064],[2.08,0.986],[3.83,1.0],[5.95,1.0],[8.55,1.0],[10.93,1.0],[0.3,0.0],[1.04,0.064],[1.92,0.972],[2.98,1.0],[4.27,1.0],[5.46,1.0],[0.15,0.0],[0.52,0.0],[0.96,0.021],[1.49,0.959],[2.14,0.999],[2.73,1.0],[0.1,0.0],[0.35,0.0],[0.64,0.0],[0.99,0.372],[1.42,0.981],[1.82,0.999],[0.06,0.0],[0.22,0.0],[0.4,0.0],[0.63,0.002],[0.9,0.824],[1.15,0.979],[0.76,0.009],[2.63,0.577],[4.81,0.98],[7.4,1.0],[10.52,1.0],[13.32,1.0],[0.38,0.002],[1.31,0.024],[2.41,0.14],[3.7,0.781],[5.26,0.993],[6.66,1.0],[0.19,0.0],[0.66,0.003],[1.2,0.019],[1.85,0.08],[2.63,0.355],[3.33,0.68],[0.1,0.0],[0.33,0.0],[0.6,0.0],[0.93,0.019],[1.32,0.238],[1.67,0.36],[0.06,0.0],[0.22,0.0],[0.4,0.0],[0.62,0.012],[0.88,0.235],[1.11,0.415],[0.05,0.0],[0.17,0.0],[0.31,0.0],[0.47,0.002],[0.67,0.23],[0.85,0.451],[0.4,0.0],[1.36,0.0],[2.45,0.282],[3.7,0.987],[5.14,1.0],[6.38,1.0],[0.2,0.0],[0.68,0.0],[1.22,0.0],[1.85,0.074],[2.57,0.725],[3.19,0.976],[0.1,0.0],[0.34,0.0],[0.61,0.0],[0.92,0.0],[1.29,0.006],[1.6,0.07],[0.05,0.0],[0.17,0.0],[0.31,0.0],[0.46,0.0],[0.64,0.0],[0.8,0.0],[0.04,0.0],[0.14,0.0],[0.24,0.0],[0.37,0.0],[0.51,0.0],[0.64,0.0],[0.04,0.0],[0.14,0.0],[0.24,0.0],[0.37,0.0],[0.51,0.0],[0.64,0.0]],"mercy":[[1.0,0.871,0.0],[1.0,0.875,0.0],[1.0,0.875,0.0],[1.0,0.875,0.0],[1.0,0.87,0.0],[1.0,0.874,0.0],[1.0,0.875,0.0],[1.0,0.875,0.0],[1.0,0.871,0.0],[1.0,0.874,0.0],[1.0,0.875,0.0],[1.0,0.875,0.0],[1.0,0.87,0.125],[1.0,0.874,0.125],[1.0,0.875,0.125],[1.0,0.875,0.125],[1.0,0.859,0.25],[1.0,0.865,0.25],[1.0,0.867,0.25],[1.0,0.867,0.25],[1.0,0.859,0.25],[1.0,0.865,0.25],[1.0,0.867,0.25],[1.0,0.867,0.25],[1.0,0.871,0.25],[1.0,0.875,0.25],[1.0,0.875,0.25],[1.0,0.875,0.25],[1.0,0.871,0.5],[1.0,0.875,0.5],[1.0,0.875,0.5],[1.0,0.875,0.5],[1.0,0.87,0.5],[1.0,0.874,0.5],[1.0,0.875,0.5],[1.0,0.875,0.5],[1.0,0.858,0.5],[1.0,0.865,0.5],[1.0,0.867,0.5],[1.0,0.867,0.5],[1.0,0.825,1.0],[1.0,0.862,1.0],[1.0,0.866,1.0],[1.0,0.866,1.0],[1.0,0.869,1.0],[1.0,0.874,1.0],[1.0,0.875,1.0],[1.0,0.875,1.0],[1.0,0.817,2.0],[1.0,0.867,2.0],[1.0,0.87,2.0],[1.0,0.87,2.0],[1.0,0.841,2.0],[1.0,0.869,2.0],[1.0,0.871,2.0],[1.0,0.871,2.0],[1.0,0.854,2.0],[1.0,0.865,2.0],[1.0,0.867,2.0],[1.0,0.867,2.0],[1.0,0.847,3.0],[1.0,0.869,3.0],[1.0,0.871,3.0],[1.0,0.871,3.0],[1.0,0.802,3.0],[1.0,0.867,3.0],[1.0,0.87,3.0],[1.0,0.87,3.0],[1.0,0.854,3.0],[1.0,0.87,3.0],[1.0,0.871,3.0],[1.0,0.871,3.0],[1.0,0.826,4.0],[1.0,0.863,4.0],[1.0,0.867,4.0],[1.0,0.867,4.0],[0.979,0.793,5.0],[1.0,0.86,5.0],[1.0,0.865,5.0],[1.0,0.865,5.0],[1.0,0.695,5.0],[1.0,0.856,5.0],[1.0,0.868,5.0],[1.0,0.869,5.0],[0.786,0.549,6.0],[1.0,0.824,6.0],[1.0,0.853,6.0],[1.0,0.862,6.0],[0.367,0.568,7.0],[0.973,0.827,7.0],[1.0,0.86,7.0],[1.0,0.863,7.0],[0.316,0.475,9.0],[0.97,0.778,9.0],[1.0,0.845,9.0],[1.0,0.853,9.0],[0.104,0.593,10.0],[0.987,0.8,10.0],[1.0,0.839,10.0],[1.0,0.855,10.0]],"shap":[["avg_party_level",0.22],["avg_monster_size_num",0.201],["burst_vs_pc_hp",0.187],["num_monsters_total",0.165],["party_hit_chance",0.116],["physical_res_vs_martial",0.079],["avg_monster_dpr",0.076],["avg_monster_stat_sum",0.075],["has_healer",0.053],["avg_monster_ac",0.048]],"guard_ab":[1.6302,-3.9771],"guard_old":[2.197,-4.394]}
+{"lich":{"1":[0.0,0.0,0.0,0.0,0.0,0.0705,0.141,0.2115,0.282,0.4582,0.6345,0.8107,0.8539,0.8545,0.8547,0.8558,0.8564,0.858,0.8598,0.8599],"2":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0185,0.037,0.0555,0.074,0.2367,0.3995,0.5622,0.725,0.8087,0.8524,0.8525],"3":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0092,0.0185,0.0277,0.037,0.1191,0.2012,0.2834,0.3655,0.418,0.4705,0.523],"4":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0015,0.003,0.0045,0.006,0.0273,0.0487,0.07],"5":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0011,0.0023,0.0034,0.0045,0.0205,0.0365,0.0525],"6":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0008,0.0015,0.0023,0.003,0.0137,0.0243,0.035],"7":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0004,0.0008,0.0011,0.0015,0.0068,0.0122,0.0175],"8":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"9":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"10":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"11":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"12":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"13":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"14":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"15":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"16":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"17":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"18":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"19":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"guard":[[7.16,3.28,0.999],[25.25,1.14,1.0],[47.47,0.64,1.0],[50.0,0.42,1.0],[50.0,0.3,1.0],[50.0,0.26,1.0],[3.58,6.56,0.844],[12.62,2.29,1.0],[23.74,1.28,1.0],[37.72,0.85,1.0],[50.0,0.61,1.0],[50.0,0.51,1.0],[1.79,13.13,0.018],[6.31,4.58,1.0],[11.87,2.57,1.0],[18.86,1.69,1.0],[27.92,1.22,1.0],[36.7,1.03,1.0],[0.89,26.26,0.0],[3.16,9.16,0.901],[5.93,5.13,0.998],[9.43,3.39,1.0],[13.96,2.44,1.0],[18.35,2.06,1.0],[0.6,39.39,0.0],[2.1,13.74,0.403],[3.96,7.7,0.939],[6.29,5.08,1.0],[9.31,3.66,1.0],[12.23,3.09,1.0],[0.38,62.36,0.0],[1.33,21.75,0.007],[2.5,12.19,0.563],[3.97,8.05,0.979],[5.88,5.79,1.0],[7.73,4.88,1.0],[2.4,8.25,0.368],[8.39,2.85,1.0],[15.6,1.58,1.0],[24.47,1.04,1.0],[35.62,0.74,1.0],[46.08,0.63,1.0],[1.2,16.51,0.001],[4.19,5.7,0.881],[7.8,3.17,1.0],[12.23,2.08,1.0],[17.81,1.49,1.0],[23.04,1.25,1.0],[0.6,33.02,0.0],[2.1,11.41,0.029],[3.9,6.34,0.545],[6.12,4.16,0.999],[8.91,2.98,1.0],[11.52,2.51,1.0],[0.3,66.04,0.0],[1.05,22.81,0.0],[1.95,12.68,0.003],[3.06,8.32,0.148],[4.45,5.96,0.85],[5.76,5.02,0.98],[0.2,99.06,0.0],[0.7,34.22,0.0],[1.3,19.02,0.0],[2.04,12.48,0.007],[2.97,8.93,0.343],[3.84,7.53,0.672],[0.13,156.84,0.0],[0.44,54.18,0.0],[0.82,30.11,0.0],[1.29,19.75,0.0],[1.87,14.14,0.109],[2.43,11.92,0.247],[1.51,19.63,0.913],[5.17,6.61,1.0],[9.41,3.6,1.0],[14.37,2.33,1.0],[20.26,1.64,1.0],[25.44,1.38,1.0],[0.75,39.25,0.064],[2.59,13.21,0.986],[4.71,7.2,1.0],[7.19,4.65,1.0],[10.13,3.29,1.0],[12.72,2.76,1.0],[0.38,78.5,0.0],[1.29,26.43,0.064],[2.35,14.4,0.972],[3.59,9.3,1.0],[5.06,6.57,1.0],[6.36,5.52,1.0],[0.19,157.0,0.0],[0.65,52.86,0.0],[1.18,28.8,0.021],[1.8,18.6,0.959],[2.53,13.15,0.999],[3.18,11.05,1.0],[0.13,235.5,0.0],[0.43,79.28,0.0],[0.78,43.21,0.0],[1.2,27.9,0.372],[1.69,19.72,0.981],[2.12,16.57,0.999],[0.08,372.88,0.0],[0.27,125.53,0.0],[0.5,68.41,0.0],[0.76,44.18,0.002],[1.07,31.23,0.824],[1.34,26.24,0.979],[0.82,31.02,0.009],[2.8,10.26,0.577],[5.1,5.52,0.98],[7.79,3.53,1.0],[10.98,2.48,1.0],[13.8,2.08,1.0],[0.41,62.04,0.002],[1.4,20.53,0.024],[2.55,11.05,0.14],[3.9,7.06,0.781],[5.49,4.95,0.993],[6.9,4.15,1.0],[0.2,124.08,0.0],[0.7,41.06,0.003],[1.28,22.09,0.019],[1.95,14.13,0.08],[2.75,9.91,0.355],[3.45,8.31,0.68],[0.1,248.16,0.0],[0.35,82.12,0.0],[0.64,44.18,0.0],[0.97,28.25,0.019],[1.37,19.81,0.238],[1.72,16.62,0.36],[0.07,372.24,0.0],[0.23,123.18,0.0],[0.43,66.28,0.0],[0.65,42.38,0.012],[0.92,29.72,0.235],[1.15,24.93,0.415],[0.05,589.39,0.0],[0.16,195.03,0.0],[0.28,104.94,0.0],[0.43,67.1,0.002],[0.61,47.06,0.23],[0.76,39.47,0.451],[1.25,25.66,0.0],[4.25,8.64,0.0],[7.62,4.71,0.282],[11.45,3.04,0.987],[15.84,2.15,1.0],[19.57,1.81,1.0],[0.63,51.33,0.0],[2.12,17.28,0.0],[3.81,9.42,0.0],[5.73,6.08,0.074],[7.92,4.3,0.725],[9.79,3.61,0.976],[0.31,102.66,0.0],[1.06,34.56,0.0],[1.9,18.83,0.0],[2.86,12.16,0.0],[3.96,8.6,0.006],[4.89,7.22,0.07],[0.16,205.31,0.0],[0.53,69.12,0.0],[0.95,37.67,0.0],[1.43,24.32,0.0],[1.98,17.19,0.0],[2.45,14.45,0.0],[0.1,307.97,0.0],[0.35,103.68,0.0],[0.63,56.5,0.0],[0.95,36.49,0.0],[1.32,25.79,0.0],[1.63,21.67,0.0],[0.07,487.62,0.0],[0.22,164.16,0.0],[0.4,89.46,0.0],[0.6,57.77,0.0],[0.83,40.84,0.0],[1.03,34.31,0.0]],"mercy":[[1.0,0.871,0.0],[1.0,0.875,0.0],[1.0,0.875,0.0],[1.0,0.875,0.0],[1.0,0.87,0.0],[1.0,0.874,0.0],[1.0,0.875,0.0],[1.0,0.875,0.0],[1.0,0.871,0.0],[1.0,0.874,0.0],[1.0,0.875,0.0],[1.0,0.875,0.0],[1.0,0.863,0.125],[1.0,0.871,0.125],[1.0,0.872,0.125],[1.0,0.872,0.125],[1.0,0.859,0.25],[1.0,0.865,0.25],[1.0,0.867,0.25],[1.0,0.867,0.25],[1.0,0.859,0.25],[1.0,0.865,0.25],[1.0,0.867,0.25],[1.0,0.867,0.25],[1.0,0.871,0.25],[1.0,0.875,0.25],[1.0,0.875,0.25],[1.0,0.875,0.25],[1.0,0.867,0.5],[1.0,0.871,0.5],[1.0,0.872,0.5],[1.0,0.872,0.5],[1.0,0.868,0.5],[1.0,0.876,0.5],[1.0,0.877,0.5],[1.0,0.877,0.5],[1.0,0.858,0.5],[1.0,0.865,0.5],[1.0,0.867,0.5],[1.0,0.867,0.5],[1.0,0.825,1.0],[1.0,0.862,1.0],[1.0,0.866,1.0],[1.0,0.866,1.0],[1.0,0.869,1.0],[1.0,0.874,1.0],[1.0,0.875,1.0],[1.0,0.875,1.0],[1.0,0.817,2.0],[1.0,0.867,2.0],[1.0,0.87,2.0],[1.0,0.87,2.0],[1.0,0.841,2.0],[1.0,0.869,2.0],[1.0,0.871,2.0],[1.0,0.871,2.0],[1.0,0.854,2.0],[1.0,0.865,2.0],[1.0,0.867,2.0],[1.0,0.867,2.0],[1.0,0.853,3.0],[1.0,0.872,3.0],[1.0,0.873,3.0],[1.0,0.874,3.0],[1.0,0.802,3.0],[1.0,0.867,3.0],[1.0,0.87,3.0],[1.0,0.87,3.0],[1.0,0.854,3.0],[1.0,0.87,3.0],[1.0,0.871,3.0],[1.0,0.871,3.0],[1.0,0.826,4.0],[1.0,0.863,4.0],[1.0,0.867,4.0],[1.0,0.867,4.0],[0.979,0.793,5.0],[1.0,0.86,5.0],[1.0,0.865,5.0],[1.0,0.865,5.0],[1.0,0.695,5.0],[1.0,0.856,5.0],[1.0,0.868,5.0],[1.0,0.869,5.0],[0.786,0.539,6.0],[1.0,0.813,6.0],[1.0,0.853,6.0],[1.0,0.862,6.0],[0.367,0.568,7.0],[0.973,0.827,7.0],[1.0,0.86,7.0],[1.0,0.863,7.0],[0.316,0.475,9.0],[0.97,0.778,9.0],[1.0,0.845,9.0],[1.0,0.853,9.0],[0.104,0.593,10.0],[0.987,0.8,10.0],[1.0,0.839,10.0],[1.0,0.855,10.0]],"shap":[["avg_party_level",0.22],["avg_monster_size_num",0.201],["burst_vs_pc_hp",0.187],["num_monsters_total",0.165],["party_hit_chance",0.116],["physical_res_vs_martial",0.079],["avg_monster_dpr",0.076],["avg_monster_stat_sum",0.075],["has_healer",0.053],["avg_monster_ac",0.048]],"guard_race":[0.1924,2.0856,4.1217],"guard_v2":[1.6302,-3.9771],"guard_v1":[2.197,-4.394]}
 </script>
 
 <script>
@@ -880,27 +883,33 @@
     });
   } }catch(e){console.warn('shap widget',e)}
 
-  /* ── guard explorer ── */
+  /* ── guard explorer: the damage race ── */
   try{ if(D){
     const svg=document.getElementById('guardChart');
     const W=760,H=300,L=48,R=16,T=14,B=34, X=t=>L+(Math.min(t,6)/6)*(W-L-R), Y=p=>T+(1-p)*(H-T-B);
     for(const gy of [0,.25,.5,.75,1]){ S('line',{x1:L,x2:W-R,y1:Y(gy),y2:Y(gy),stroke:'rgba(201,162,39,.15)'},svg);
       S('text',{x:L-8,y:Y(gy)+4,'text-anchor':'end','font-size':11,fill:'#b8a98c'},svg).textContent=(gy*100)+'%'; }
     for(const gx of [1,2,3,4,5,6]){ S('text',{x:X(gx),y:H-B+18,'text-anchor':'middle','font-size':11,fill:'#b8a98c'},svg).textContent=gx; }
-    S('text',{x:(L+W-R)/2,y:H-2,'text-anchor':'middle','font-size':11,fill:'#8d7f68'},svg).textContent='rounds to kill the party (TTK)';
-    D.guard.forEach(([t,p])=>{ if(t<=6) S('circle',{cx:X(t),cy:Y(p),r:3.2,fill:'rgba(91,155,213,.55)'},svg); });
-    const sig=(a,b)=>{let d='';for(let t=0;t<=6.01;t+=.08){const p=1/(1+Math.exp(-(a*t+b)));d+=(d?'L':'M')+X(t)+','+Y(p);}return d;};
-    S('path',{d:sig(...D.guard_old),stroke:'#ff9b9b',fill:'none','stroke-width':2.4,'stroke-dasharray':'7 5'},svg);
-    S('path',{d:sig(...D.guard_ab),stroke:'#e6c35c',fill:'none','stroke-width':3},svg);
-    const cur=S('line',{y1:T,y2:H-B,stroke:'#f5ecd9','stroke-width':1.4,'stroke-dasharray':'3 3'},svg);
-    const legend=[['#e6c35c','calibrated fit (production)'],['#ff9b9b','previous hand-tuned'],['#5b9bd5','simulated cells (up to 2,000 trials each)']];
+    S('text',{x:(L+W-R)/2,y:H-2,'text-anchor':'middle','font-size':11,fill:'#8d7f68'},svg).textContent='rounds the party survives';
+    // grid cells: green = party won most deathmatches, red = lost most
+    D.guard.forEach(function(c){ var t=c[0], p=c[2];
+      if(t<=6) S('circle',{cx:X(t),cy:Y(p),r:3.2,fill:p>=.5?'rgba(122,178,110,.6)':'rgba(211,91,91,.6)'},svg); });
+    const sig1=(a,b)=>{let d='';for(let t=0;t<=6.01;t+=.08){const p=1/(1+Math.exp(-(a*t+b)));d+=(d?'L':'M')+X(t)+','+Y(p);}return d;};
+    S('path',{d:sig1(...D.guard_v2),stroke:'#ff9b9b',fill:'none','stroke-width':2.4,'stroke-dasharray':'7 5'},svg);
+    const raceCurve=S('path',{stroke:'#e6c35c',fill:'none','stroke-width':3},svg);
+    const cur=S('circle',{r:6,fill:'#a3273a',stroke:'#e6c35c','stroke-width':2},svg);
+    const legend=[['#e6c35c','race cap at this kill speed (production)'],['#ff9b9b','survival-only fit (blind to attrition)'],['#7ab26e','cell: party wins the deathmatch'],['#d35b5b','cell: party loses']];
     legend.forEach(([c,t],k)=>{ S('rect',{x:L+10,y:T+6+k*18,width:14,height:4,fill:c},svg);
       S('text',{x:L+30,y:T+11+k*18,'font-size':11,fill:'#e8dcc0'},svg).textContent=t; });
-    const upd=()=>{ const t=+gTTK.value; gTTKv.textContent=t.toFixed(1);
-      cur.setAttribute('x1',X(t)); cur.setAttribute('x2',X(t));
-      const f=(a,b)=>Math.round(100/(1+Math.exp(-(a*t+b))));
-      gNew.textContent=f(...D.guard_ab)+'%'; gOld.textContent=f(...D.guard_old)+'%'; };
-    gTTK.oninput=upd; upd();
+    const race=(t,k)=>1/(1+Math.exp(-(D.guard_race[0]*t - D.guard_race[1]*Math.log(k) + D.guard_race[2])));
+    const upd=()=>{ const t=+gTTK.value, k=+gKill.value;
+      gTTKv.textContent=t.toFixed(1); gKillv.textContent=k.toFixed(1);
+      let d=''; for(let s=0;s<=6.01;s+=.08){ d+=(d?'L':'M')+X(s)+','+Y(race(s,k)); }
+      raceCurve.setAttribute('d',d);
+      cur.setAttribute('cx',X(t)); cur.setAttribute('cy',Y(race(t,k)));
+      gNew.textContent=Math.round(100*race(t,k))+'%';
+      gOld.textContent=Math.round(100/(1+Math.exp(-(D.guard_v2[0]*t+D.guard_v2[1]))))+'%'; };
+    gTTK.oninput=upd; gKill.oninput=upd; upd();
   } }catch(e){console.warn('guard widget',e)}
 
   /* ── LICH LAB ── */

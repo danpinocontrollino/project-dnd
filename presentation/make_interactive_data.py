@@ -6,10 +6,10 @@ carry its data inside). Contents:
 
   lich      P(win) for 1..19 liches x party level 1..20, computed through
             the real serving path (guards included) - the demo is not a mock
-  guard     (TTK, p_sim) points from the Battlecast guard grid
+  guard     (survive, kill, p_sim) triples from the Battlecast guard grid
   mercy     (p_sim, p_model, CR) triples from the mercy grid
   shap      top-10 features from figures/shap_ranking.csv
-  guard_ab / guard_old   calibrated vs original guard constants
+  guard_race / guard_v2 / guard_v1   race-cap fit vs the two old guards
 
 Run: make present-data
 """
@@ -44,6 +44,7 @@ from lethality_engine import (  # noqa: E402
     _BALANCED,
     _GUARD_A,
     _GUARD_B,
+    _GUARD_C,
     _party_config,
     load_monster_database,
     predict_win_for_parties,
@@ -68,14 +69,17 @@ def main() -> None:
 
     df = load_results("battlecast_bridge/results.jsonl")
     raw = model_rows(df)
-    feats = DnDFeatureEngineer(1.5, FEATURE_COLUMNS).transform(raw)
+    feats = DnDFeatureEngineer(
+        1.5, list(FEATURE_COLUMNS) + ["rounds_to_kill_monster_raw"]
+    ).transform(raw)
     df["ttk"] = feats["rounds_to_kill_party"].values
+    df["tkill"] = feats["rounds_to_kill_monster_raw"].values
     df["p_model"] = pipe.predict_proba(raw[list(RAW_INPUT_COLUMNS)])[:, 1]
 
     g = df[df.grid == "guard"]
     guard_pts = [
-        [round(float(t), 2), round(float(p), 3)]
-        for t, p in zip(g.ttk, g.p_party_win)
+        [round(float(t), 2), round(float(k), 2), round(float(p), 3)]
+        for t, k, p in zip(g.ttk, g.tkill, g.p_party_win)
     ]
     m = df[df.grid == "mercy"]
     mercy_pts = [
@@ -92,8 +96,9 @@ def main() -> None:
         "guard": guard_pts,
         "mercy": mercy_pts,
         "shap": shap_data,
-        "guard_ab": [round(_GUARD_A, 4), round(_GUARD_B, 4)],
-        "guard_old": [2.197, -4.394],
+        "guard_race": [round(_GUARD_A, 4), round(_GUARD_C, 4), round(_GUARD_B, 4)],
+        "guard_v2": [1.6302, -3.9771],
+        "guard_v1": [2.197, -4.394],
     }
     path = os.path.join(REPO, "presentation", "interactive_data.json")
     with open(path, "w", encoding="utf-8") as fh:
