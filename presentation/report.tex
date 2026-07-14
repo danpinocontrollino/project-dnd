@@ -1,11 +1,11 @@
 % Final project report. Build with `make report` (or pdflatex twice, for the
 % references). Figures come from ../figures/, so recompiling after a retrain
 % keeps the numbers and plots consistent.
-\documentclass[10pt,twocolumn]{article}
+\documentclass[10pt]{article}
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage[a4paper,margin=2cm,columnsep=0.8cm]{geometry}
+\usepackage[a4paper,margin=2.2cm]{geometry}
 \usepackage{lmodern}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
@@ -27,6 +27,7 @@
 \titleformat{\section}{\large\bfseries\color{sapienzaRed}}{\thesection}{0.6em}{}
 \titleformat{\subsection}{\normalsize\bfseries\color{sapienzaRed}}{\thesubsection}{0.6em}{}
 \setlength{\parskip}{2pt}
+\emergencystretch=1em
 
 \newcommand{\code}[1]{\texttt{\small #1}}
 
@@ -270,18 +271,18 @@ $\rho{=}0.54$). Two caveats we state openly: the simulator implements 2024-SRD
 rules while our logs are 2014-era play, and its scripted optimal play makes
 deathmatch rates an upper bound.
 
-\begin{figure*}[t]
+\begin{figure}[t]
   \centering
-  \includegraphics[width=0.92\textwidth]{battlecast_guard_fit.png}
+  \includegraphics[width=\textwidth]{battlecast_guard_fit.png}
   \caption{Deathmatch cells vs.\ the damage race (left) and cap values against
   simulated outcomes (right): the race fit against the survival-only guard it
   replaced.}
   \label{fig:guard}
-\end{figure*}
+\end{figure}
 
-\begin{figure}[b]
+\begin{figure}[t]
   \centering
-  \includegraphics[width=.75\linewidth]{battlecast_mercy_gap.png}
+  \includegraphics[width=.52\linewidth]{battlecast_mercy_gap.png}
   \caption{DM mercy quantified: model (table reality) vs.\ simulator
   (deathmatch), one point per encounter, color = CR.}
   \label{fig:mercy}
@@ -318,7 +319,7 @@ Base rate $P(\text{win})$ & \multicolumn{2}{c}{0.830}\\
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=.92\linewidth]{calibration_curve.png}
+  \includegraphics[width=.5\linewidth]{calibration_curve.png}
   \caption{Reliability on held-out campaigns.}
   \label{fig:calib}
 \end{figure}
@@ -340,7 +341,7 @@ model and accept roughly 0.04 AUC as the price of sane counterfactual behavior. 
 dominance, level monotonicity, boundary verdicts, the full OOD flow through the CR
 predictor) now gates every model change, alongside 64 unit tests.
 
-\begin{table}[b]
+\begin{table}[t]
 \centering\footnotesize\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lcc}
 \toprule
